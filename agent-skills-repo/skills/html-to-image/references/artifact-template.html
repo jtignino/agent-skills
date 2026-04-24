@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML → Imagen Export</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+  :root {
+    --bg:           #09090f;
+    --bg-panel:     #0e0e17;
+    --bg-control:   #16161f;
+    --border:       #1e1e2e;
+    --border-hover: #2a2a3e;
+    --text:         #e8e8f0;
+    --text-muted:   #5a5a78;
+    --accent:       #7400B8;
+    --teal:         #42E2B8;
+    --teal-dim:     rgba(66,226,184,0.15);
+    --r-sm: 6px;  --r-md: 10px;  --r-lg: 14px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Poppins', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    font-size: 13px;
+  }
+
+  /* ── Slides area ── */
+  #slides-container {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 32px 24px 24px;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .slide {
+    position: relative;
+    width: 540px; height: 540px;
+    overflow: hidden; flex-shrink: 0;
+    border-radius: var(--r-lg);
+    box-shadow: 0 12px 48px rgba(0,0,0,0.55), 0 0 0 1px var(--border);
+  }
+
+  /* ── Export panel ── */
+  #export-panel {
+    background: var(--bg-panel);
+    border-top: 1px solid var(--border);
+    padding: 16px 20px 18px;
+    display: flex; flex-direction: column; gap: 14px;
+    position: sticky; bottom: 0; z-index: 100;
+  }
+
+  /* Top row */
+  #panel-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+  .panel-label {
+    font-size: 11px; font-weight: 600; letter-spacing: .08em;
+    color: var(--text-muted); text-transform: uppercase; white-space: nowrap;
+  }
+
+  #thumb-strip {
+    display: flex; gap: 10px; overflow-x: auto; flex: 1; padding-bottom: 2px;
+  }
+  #thumb-strip::-webkit-scrollbar { height: 3px; }
+  #thumb-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  .thumb-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 5px; flex-shrink: 0; user-select: none;
+  }
+
+  .thumb-preview {
+    width: 72px; height: 72px;
+    border-radius: var(--r-md);
+    border: 2px solid var(--border);
+    background: var(--bg-control);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; overflow: hidden; cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .thumb-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 7px; }
+  .thumb-item.selected .thumb-preview {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px var(--teal-dim);
+  }
+  .thumb-item input[type="checkbox"] { accent-color: var(--teal); width: 14px; height: 14px; cursor: pointer; }
+  .thumb-label {
+    font-size: 10px; font-weight: 500; color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72px;
+  }
+
+  #select-links { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
+  .sel-link {
+    font-size: 11px; font-weight: 500; color: var(--text-muted); cursor: pointer;
+    padding: 3px 10px; border-radius: 99px;
+    border: 1px solid var(--border); background: var(--bg-control);
+    transition: border-color .15s, color .15s;
+  }
+  .sel-link:hover { border-color: var(--border-hover); color: var(--text); }
+
+  /* Bottom row */
+  #panel-bottom { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .control-group {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-control); border: 1px solid var(--border);
+    border-radius: var(--r-md); padding: 7px 12px;
+    transition: border-color .15s;
+  }
+  .control-group:focus-within { border-color: var(--border-hover); }
+
+  .ctrl-label {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .06em; white-space: nowrap;
+  }
+
+  .control-group select {
+    background: transparent; border: none; outline: none;
+    color: var(--text); font-family: 'Poppins', sans-serif;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    padding-right: 18px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a5a78' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0 center;
+  }
+  .control-group select option { background: #16161f; }
+
+  .control-group input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 90px; height: 4px; border-radius: 99px;
+    background: var(--border); outline: none; cursor: pointer;
+  }
+  .control-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--teal); cursor: pointer;
+    box-shadow: 0 0 0 3px var(--teal-dim); transition: box-shadow .15s;
+  }
+  .control-group input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 5px var(--teal-dim); }
+
+  .ctrl-val { font-size: 12px; font-weight: 600; color: var(--teal); min-width: 32px; text-align: right; }
+
+  #action-buttons { display: flex; gap: 8px; margin-left: auto; }
+
+  .btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: var(--r-md); border: none;
+    font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:active:not(:disabled) { transform: scale(0.97); }
+  .btn:disabled { opacity: .3; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--bg-control); color: var(--text); border: 1px solid var(--border);
+  }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--border-hover); }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { opacity: .88; }
+
+  /* Progress */
+  #progress-wrap {
+    display: none; height: 2px; background: var(--border);
+    border-radius: 99px; overflow: hidden; margin-top: -6px;
+  }
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--teal));
+    width: 0%; transition: width .25s ease;
+  }
+  #status-msg { font-size: 11px; font-weight: 500; color: var(--text-muted); min-height: 14px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     SLIDES — Customize this section with your content
+     Each .slide = one output image
+     Natural size 540×540 → captured at scale:2 → 1080×1080px output
+     All CSS must be inline or in <style> tags inside each slide
+     ═══════════════════════════════════════════════════ -->
+
+<div id="slides-container">
+
+  <!-- SLIDE 1 -->
+  <div class="slide" id="slide-1" data-label="Slide 1">
+    <style>
+      #slide-1 {
+        background: linear-gradient(135deg, #1a0533 0%, #3b0a6e 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 16px;
+        font-family: 'Poppins', sans-serif;
+      }
+      #slide-1 h1 { color: #fff; font-size: 36px; font-weight: 700; text-align: center; }
+      #slide-1 p  { color: rgba(255,255,255,0.65); font-size: 15px; text-align: center; }
+    </style>
+    <h1>Slide 1</h1>
+    <p>Reemplazá este contenido con tu diseño</p>
+  </div>
+
+  <!-- SLIDE 2 -->
+  <div class="slide" id="slide-2" data-label="Slide 2">
+    <style>
+      #slide-2 {
+        background: linear-gradient(135deg, #042233 0%, #0a6e5a 100%);
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 16px;
+        font-family: 'Poppins', sans-serif;
+      }
+      #slide-2 h1 { color: #fff; font-size: 36px; font-weight: 700; text-align: center; }
+      #slide-2 p  { color: rgba(255,255,255,0.65); font-size: 15px; text-align: center; }
+    </style>
+    <h1>Slide 2</h1>
+    <p>Segundo slide del carrusel</p>
+  </div>
+
+  <!-- ADD MORE SLIDES BY COPYING THE PATTERN ABOVE -->
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     EXPORT PANEL — Do not modify this section
+     ═══════════════════════════════════════════════════ -->
+
+<div id="export-panel">
+
+  <div id="panel-top">
+    <span class="panel-label">Slides:</span>
+    <div id="thumb-strip"></div>
+    <div id="select-links">
+      <span class="sel-link" onclick="selectAll()">Todos</span>
+      <span class="sel-link" onclick="selectNone()">Ninguno</span>
+    </div>
+  </div>
+
+  <div id="panel-bottom">
+
+    <div class="control-group">
+      <span class="ctrl-label">Formato</span>
+      <select id="fmt-select">
+        <option value="png">🖼 PNG</option>
+        <option value="jpg">📷 JPG</option>
+        <option value="webp">⚡ WebP</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <span class="ctrl-label">Escala</span>
+      <select id="scale-select">
+        <option value="1" selected>2× (recomendado)</option>
+        <option value="0.5">1×</option>
+        <option value="1.5">3×</option>
+      </select>
+    </div>
+
+    <div id="action-buttons">
+      <button class="btn btn-secondary" onclick="downloadSelected()">⬇ Descargar seleccionados</button>
+      <button class="btn btn-primary"   onclick="downloadAll()">⬇ Descargar todos (ZIP)</button>
+    </div>
+
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+  <div id="status-msg"></div>
+
+</div>
+
+
+<script>
+const slides       = Array.from(document.querySelectorAll('.slide'));
+const fmtSelect    = document.getElementById('fmt-select');
+const progressWrap = document.getElementById('progress-wrap');
+const progressBar  = document.getElementById('progress-bar');
+const statusMsg    = document.getElementById('status-msg');
+
+// Build thumbnails
+slides.forEach((slide, i) => {
+  const label = slide.dataset.label || `Slide ${i + 1}`;
+  const item  = document.createElement('div');
+  item.className = 'thumb-item selected';
+  item.innerHTML = `
+    <div class="thumb-preview" id="thumb-${i}" onclick="toggleByClick(${i})">🖼</div>
+    <input type="checkbox" checked data-idx="${i}" onchange="toggleThumb(this,${i})">
+    <span class="thumb-label">${label}</span>`;
+  document.getElementById('thumb-strip').appendChild(item);
+
+  setTimeout(() => {
+    html2canvas(slide, { scale: 0.12, logging: false, useCORS: true, allowTaint: false })
+      .then(c => {
+        const img = document.createElement('img');
+        img.src   = c.toDataURL('image/jpeg', 0.65);
+        const el  = document.getElementById(`thumb-${i}`);
+        el.innerHTML = ''; el.appendChild(img);
+      }).catch(() => {});
+  }, i * 350);
+});
+
+function toggleByClick(i) {
+  const cb = document.querySelector(`input[data-idx="${i}"]`);
+  cb.checked = !cb.checked; toggleThumb(cb, i);
+}
+function toggleThumb(cb, i) {
+  cb.closest('.thumb-item').classList.toggle('selected', cb.checked);
+}
+function selectAll()  { document.querySelectorAll('#thumb-strip input').forEach(cb => { cb.checked = true;  cb.closest('.thumb-item').classList.add('selected'); }); }
+function selectNone() { document.querySelectorAll('#thumb-strip input').forEach(cb => { cb.checked = false; cb.closest('.thumb-item').classList.remove('selected'); }); }
+
+// Clone-based capture (safe against transform ancestors)
+async function captureSlide(el, { w, h, scale, mime, quality }) {
+  const clone = el.cloneNode(true);
+  const host  = document.createElement('div');
+  Object.assign(host.style, {
+    position: 'fixed', top: '-99999px', left: '-99999px',
+    width: w + 'px', height: h + 'px', overflow: 'hidden',
+  });
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  host.getBoundingClientRect();
+  let canvas;
+  try {
+    canvas = await html2canvas(clone, {
+      scale, useCORS: true, allowTaint: false,
+      backgroundColor: mime === 'image/png' ? null : '#ffffff',
+      width: w, height: h, windowWidth: w, windowHeight: h, logging: false,
+    });
+  } finally {
+    document.body.removeChild(host);
+  }
+  return { url: canvas.toDataURL(mime, quality), b64: canvas.toDataURL(mime, quality).split(',')[1] };
+}
+
+function getParams() {
+  const fmt     = fmtSelect.value;
+  const quality = 1; // always maximum quality
+  const scale   = parseFloat(document.getElementById('scale-select').value);
+  const mime    = fmt === 'jpg' ? 'image/jpeg' : fmt === 'webp' ? 'image/webp' : 'image/png';
+  return { fmt, quality, scale, mime };
+}
+
+function setProgress(pct, msg) {
+  progressWrap.style.display = pct > 0 ? 'block' : 'none';
+  progressBar.style.width    = pct + '%';
+  statusMsg.textContent      = msg;
+}
+function setBusy(b) { document.querySelectorAll('.btn').forEach(x => x.disabled = b); }
+function dl(url, name) {
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+async function downloadSelected() {
+  const checked = Array.from(document.querySelectorAll('#thumb-strip input:checked'))
+                       .map(cb => parseInt(cb.dataset.idx));
+  if (!checked.length) { alert('Seleccioná al menos un slide.'); return; }
+
+  const p = getParams();
+  const w = slides[0].offsetWidth;
+  const h = slides[0].offsetHeight;
+  // scale:2 base (540→1080) × user multiplier
+  const finalScale = 2 * (p.scale + 0.5); // maps 0.5→1x, 1→2x, 1.5→3x
+
+  setBusy(true);
+
+  if (checked.length === 1) {
+    setProgress(50, 'Capturando...');
+    const { url } = await captureSlide(slides[checked[0]], { w, h, scale: finalScale, mime: p.mime, quality: p.quality });
+    setProgress(100, '✓ Descargado'); dl(url, `slide-${checked[0]+1}.${p.fmt}`);
+  } else {
+    const zip = new JSZip();
+    for (let i = 0; i < checked.length; i++) {
+      const idx = checked[i];
+      setProgress(Math.round((i / checked.length) * 90), `Capturando slide ${idx+1} de ${checked.length}...`);
+      const { b64 } = await captureSlide(slides[idx], { w, h, scale: finalScale, mime: p.mime, quality: p.quality });
+      zip.file(`slide-${idx+1}.${p.fmt}`, b64, { base64: true });
+    }
+    setProgress(95, 'Generando ZIP...');
+    const blob = await zip.generateAsync({ type: 'blob' });
+    setProgress(100, `✓ ${checked.length} imágenes exportadas`);
+    dl(URL.createObjectURL(blob), 'carrusel.zip');
+  }
+
+  setBusy(false);
+  setTimeout(() => setProgress(0, ''), 4000);
+}
+
+async function downloadAll() { selectAll(); await downloadSelected(); }
+</script>
+
+</body>
+</html>
