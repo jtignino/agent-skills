@@ -6,18 +6,38 @@ Install via the [skills CLI](https://github.com/vercel-labs/skills):
 
 ```bash
 # Install a specific skill
-npx skills add piensadigital/agent-skills --skill html-to-image
+npx skills add jtignino/agent-skills --skill html-to-image
+npx skills add jtignino/agent-skills --skill piensa-brand-docs
 
 # List all available skills
-npx skills add piensadigital/agent-skills --list
+npx skills add jtignino/agent-skills --list
 
 # Install all skills
-npx skills add piensadigital/agent-skills --all
+npx skills add jtignino/agent-skills --all
 ```
 
 ---
 
 ## Available Skills
+
+### `piensa-brand-docs`
+Builds Piensa Digital AI–branded documents (reports, one-pagers, proposals, social pieces)
+as editable HTML artifacts, exported to print-quality PDF or image (PNG/JPG). Dark premium
+aesthetic — violet+mint accents, glassmorphism, Montserrat+Inter — baked-in fonts/logo/brand
+backgrounds so only the content changes.
+
+**Trigger keywords:** informe, reporte, documento, one-pager, propuesta, dossier, PDF de marca
+
+**What it does:**
+- Fully self-contained HTML output (fonts, brand backgrounds, logo, Tailwind embedded) — works offline
+- Toolbar: zoom, text color, per-page PDF export, per-page image export (PNG 1x/2x/3x, JPG)
+- Any page size/orientation on request (A4 default, social sizes, custom px)
+- Design-system reference + a worked example (real report) to guide new layouts
+
+**Install:**
+```bash
+npx skills add jtignino/agent-skills --skill piensa-brand-docs
+```
 
 ### `html-to-image`
 Transforms HTML/CSS designs into downloadable PNG, JPG, or WebP images directly in the browser.
@@ -33,7 +53,7 @@ Supports single images and multi-slide carousels (Instagram, LinkedIn, etc.).
 
 **Install:**
 ```bash
-npx skills add piensadigital/agent-skills --skill html-to-image
+npx skills add jtignino/agent-skills --skill html-to-image
 ```
 
 ---
@@ -42,6 +62,13 @@ npx skills add piensadigital/agent-skills --skill html-to-image
 
 ```
 skills/
+├── piensa-brand-docs/
+│   ├── SKILL.md
+│   ├── template.html
+│   ├── assets/          # fonts, brand backgrounds, logo, offline libs
+│   ├── references/       # design system + worked example
+│   ├── scripts/          # build_document.py, bake_backgrounds.py
+│   └── resources/        # dropzone for extra images/logos
 └── html-to-image/
     ├── SKILL.md
     └── references/
