@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<!-- Generador de fondos atmosféricos de marca. Se rasteriza con bake_backgrounds.py.
+     Parámetros por query: ?w=<px>&h=<px>&v=<1..4>  (v = variante de posición de color).
+     Colores de marca: violeta #7400b8 / #7b3fe4 · mint #42e2b8 / #62fbd0 -->
+<style>
+  :root{ --purple:#7400b8; --purple2:#7b3fe4; --mint:#42e2b8; }
+  html,body{ margin:0; padding:0; background:#000; overflow:hidden; }
+  #bg{ position:relative; overflow:hidden; }
+  .l-base{ position:absolute; inset:0; z-index:0;
+    background:linear-gradient(157deg,#170f26 0%,#110b1d 20%,#0b0a13 46%,#08080b 72%,#060608 100%); }
+  .l-treatment{ position:absolute; inset:-20%; z-index:1; filter:blur(52px); opacity:.62; }
+  .l-glow{ position:absolute; inset:0; z-index:2; }
+  .l-particles{ position:absolute; inset:0; z-index:3; opacity:.65;
+    background:
+      radial-gradient(circle at 18% 86%, rgba(225,221,240,0.35) 0, transparent 3px),
+      radial-gradient(circle at 14% 24%, rgba(255,255,255,0.30) 0, transparent 2px),
+      radial-gradient(circle at 44% 61%, rgba(194,132,252,0.16) 0, transparent 3px),
+      radial-gradient(circle at 84% 84%, rgba(255,255,255,0.22) 0, transparent 3px),
+      radial-gradient(circle at 92% 15%, rgba(98,251,208,0.16) 0, transparent 2px),
+      radial-gradient(circle at 41% 32%, rgba(225,221,240,0.28) 0, transparent 2px),
+      radial-gradient(circle at 73% 84%, rgba(255,255,255,0.28) 0, transparent 1px),
+      radial-gradient(circle at 71% 43%, rgba(225,182,255,0.24) 0, transparent 2px),
+      radial-gradient(circle at 87% 48%, rgba(255,255,255,0.12) 0, transparent 3px),
+      radial-gradient(circle at 27% 55%, rgba(225,221,240,0.15) 0, transparent 3px),
+      radial-gradient(circle at 19% 52%, rgba(255,255,255,0.30) 0, transparent 2px),
+      radial-gradient(circle at 62% 66%, rgba(98,251,208,0.18) 0, transparent 2px),
+      radial-gradient(circle at 33% 74%, rgba(255,255,255,0.24) 0, transparent 1px),
+      radial-gradient(circle at 88% 68%, rgba(225,221,240,0.18) 0, transparent 2px),
+      radial-gradient(circle at 55% 18%, rgba(255,255,255,0.20) 0, transparent 2px),
+      radial-gradient(circle at 8% 62%, rgba(225,221,240,0.20) 0, transparent 2px); }
+  .l-vignette{ position:absolute; inset:0; z-index:4;
+    background:
+      radial-gradient(circle at center, transparent 32%, rgba(0,0,0,0.26) 64%, rgba(0,0,0,0.70) 100%),
+      linear-gradient(to bottom, transparent 52%, rgba(0,0,0,0.58) 100%); }
+
+  /* Variantes de posición de color */
+  .v1 .l-treatment{ background-image:
+      radial-gradient(circle at 78% 16%, rgba(116,0,184,0.62) 0%, transparent 30%),
+      radial-gradient(circle at 22% 48%, rgba(66,226,184,0.42) 0%, transparent 26%),
+      radial-gradient(circle at 56% 76%, rgba(7,7,7,0.88) 0%, transparent 22%); }
+  .v1 .l-glow{ background:
+      radial-gradient(ellipse at 40% 3%, rgba(255,255,255,0.15), transparent 40%),
+      radial-gradient(ellipse at 18% 22%, rgba(123,63,228,0.30), transparent 44%),
+      radial-gradient(ellipse at 84% 66%, rgba(66,226,184,0.18), transparent 46%); }
+  .v2 .l-treatment{ background-image:
+      radial-gradient(circle at 20% 20%, rgba(116,0,184,0.55) 0%, transparent 28%),
+      radial-gradient(circle at 82% 42%, rgba(66,226,184,0.46) 0%, transparent 26%),
+      radial-gradient(circle at 46% 78%, rgba(7,7,7,0.88) 0%, transparent 22%); }
+  .v2 .l-glow{ background:
+      radial-gradient(ellipse at 62% 4%, rgba(255,255,255,0.14), transparent 40%),
+      radial-gradient(ellipse at 16% 26%, rgba(66,226,184,0.20), transparent 44%),
+      radial-gradient(ellipse at 86% 60%, rgba(123,63,228,0.26), transparent 46%); }
+  .v3 .l-treatment{ background-image:
+      radial-gradient(circle at 84% 74%, rgba(116,0,184,0.55) 0%, transparent 30%),
+      radial-gradient(circle at 18% 24%, rgba(66,226,184,0.44) 0%, transparent 26%),
+      radial-gradient(circle at 54% 52%, rgba(7,7,7,0.85) 0%, transparent 22%); }
+  .v3 .l-glow{ background:
+      radial-gradient(ellipse at 48% 3%, rgba(255,255,255,0.13), transparent 40%),
+      radial-gradient(ellipse at 82% 24%, rgba(123,63,228,0.24), transparent 44%),
+      radial-gradient(ellipse at 20% 70%, rgba(66,226,184,0.20), transparent 46%); }
+  .v4 .l-treatment{ background-image:
+      radial-gradient(circle at 26% 78%, rgba(116,0,184,0.58) 0%, transparent 30%),
+      radial-gradient(circle at 80% 22%, rgba(66,226,184,0.42) 0%, transparent 26%),
+      radial-gradient(circle at 50% 50%, rgba(7,7,7,0.85) 0%, transparent 22%); }
+  .v4 .l-glow{ background:
+      radial-gradient(ellipse at 54% 4%, rgba(255,255,255,0.15), transparent 40%),
+      radial-gradient(ellipse at 24% 20%, rgba(66,226,184,0.20), transparent 44%),
+      radial-gradient(ellipse at 82% 74%, rgba(123,63,228,0.26), transparent 46%); }
+</style></head>
+<body>
+  <div id="bg">
+    <div class="l-base"></div><div class="l-treatment"></div><div class="l-glow"></div>
+    <div class="l-particles"></div><div class="l-vignette"></div>
+  </div>
+  <script>
+    var q = new URLSearchParams(location.search);
+    var w = parseInt(q.get('w') || '794', 10);
+    var h = parseInt(q.get('h') || '1123', 10);
+    var v = q.get('v') || '1';
+    var bg = document.getElementById('bg');
+    bg.style.width = w + 'px'; bg.style.height = h + 'px';
+    bg.className = 'v' + v;
+    document.body.style.width = w + 'px'; document.body.style.height = h + 'px';
+  </script>
+</body></html>

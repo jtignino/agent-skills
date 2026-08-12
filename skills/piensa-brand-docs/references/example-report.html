@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Informe de Optimización y Mejoras — Sanz Clima (EJEMPLO) = título que aparece en la pestaña del navegador -->
+    <title>Informe de Optimización y Mejoras — Sanz Clima (EJEMPLO)</title>
+
+    <!-- Assets locales (el script build_document.py los INCRUSTA en el archivo final).
+         Tailwind y html-to-image quedan embebidos → documento 100% offline. -->
+    <link rel="stylesheet" href="../assets/fonts.css">
+    <script src="../assets/lib/tailwind.js"></script>
+    <script src="../assets/lib/html-to-image.js"></script>
+
+    <style>
+        :root {
+            /* ---- Lienzo (cambiá esto para otros tamaños/orientaciones) ---- */
+            --page-w: 210mm;
+            --page-h: 297mm;
+
+            /* ---- Neutrales dark estilo Vercel (negros/grises, sin tinte azul) ---- */
+            --bg:        #1c1c20;   /* fondo detrás de las hojas */
+            --sheet:     #0b0b0d;
+            --ink:       #ededed;
+            --ink-soft:  #a1a1aa;
+            --ink-faint: #6b6b73;
+            --line:        rgba(255,255,255,0.08);
+            --line-strong: rgba(255,255,255,0.14);
+
+            /* ---- Colores de marca Piensa Digital AI ---- */
+            --purple:      #e1b6ff;   /* violeta claro (acento/texto) */
+            --purple-deep: #7b3fe4;
+            --purple-brand:#7400b8;   /* violeta de marca */
+            --mint:        #42e2b8;   /* mint de marca (acento/highlight) */
+            --mint-bright: #62fbd0;
+            --glass:       rgba(255,255,255,0.03);
+        }
+
+        html, body { background-color: var(--bg); }
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            background-image: radial-gradient(ellipse at 50% 0%, #2a2a30 0%, #202024 55%, #191a1d 100%);
+        }
+        .font-display { font-family: 'Montserrat', sans-serif; }
+
+        /* Layout base independiente de Tailwind (si Tailwind no cargara, el documento
+           igual se ve ordenado y con separación entre hojas). */
+        main.print-wrapper { display: flex; flex-direction: column; align-items: center; padding: 56px 16px; }
+        #documentScaleContainer { display: flex; flex-direction: column; align-items: center; gap: 56px; }
+        .page-wrap { display: flex; flex-direction: column; align-items: flex-start; width: var(--page-w); }
+
+        /* ========================= HOJA ========================= */
+        .page-container {
+            width: var(--page-w);
+            height: var(--page-h);
+            background-color: var(--sheet);
+            /* El fondo de cada hoja es una IMAGEN horneada (misma en pantalla, print e
+               imagen exportada) → se ve idéntico en todos los visores, sin banding. */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            box-shadow: 0 30px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(0,0,0,0.4);
+            /* Perf: cachear cada hoja como capa GPU (scroll fluido) */
+            transform: translateZ(0);
+            contain: layout paint style;
+        }
+        /* Asignación de fondos por hoja (cover = bg1; contenido cicla bg2..bg4).
+           Si tu documento tiene más hojas, agregá más reglas o reutilizá los fondos. */
+        #page-1 { background-image: url("../assets/backgrounds/a4/bg1.png"); }
+        #page-2 { background-image: url("../assets/backgrounds/a4/bg2.png"); }
+        #page-3 { background-image: url("../assets/backgrounds/a4/bg3.png"); }
+        #page-4 { background-image: url("../assets/backgrounds/a4/bg4.png"); }
+
+        /* Padding editorial interno */
+        .page-pad { padding: 17mm 16mm; }
+        .page-pad-cover { padding: 20mm 18mm; }
+
+        /* ===================== GLASSMORFISMO ===================== */
+        .glass {
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+                    backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            position: relative;
+        }
+        /* Línea superior con gradiente de marca (opcional, para bloques destacados) */
+        .glass-topline::before {
+            content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--purple), var(--mint), transparent);
+            opacity: 0.7;
+        }
+
+        /* ====================== TIPOGRAFÍA ====================== */
+        .eyebrow {
+            font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+            font-weight: 700; color: var(--ink-faint);
+        }
+        /* --- Tags / pills --- */
+        .pill {
+            display: inline-flex; align-items: center; gap: 7px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+            padding: 6px 13px; border-radius: 9999px;
+        }
+        .pill-outline { border: 1px solid var(--line-strong); color: var(--ink-soft); background: rgba(255,255,255,0.02); }
+        .pill-mint    { background: rgba(66,226,184,0.12); color: var(--mint); border: 1px solid rgba(66,226,184,0.30); }
+        .pill-purple  { background: rgba(123,63,228,0.14); color: var(--purple); border: 1px solid rgba(123,63,228,0.35); }
+
+        .text-gradient {
+            background-image: linear-gradient(100deg, var(--purple) 0%, var(--mint) 100%);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent; color: transparent;
+        }
+
+        /* Encabezado corrido de páginas de contenido */
+        .running-head {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding-bottom: 14px; margin-bottom: 22px; border-bottom: 1px solid var(--line);
+        }
+
+        /* Badge numérico de sección (estilo Supabase: borde fino + interior apagado) */
+        .sec-num {
+            width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 13px;
+            color: var(--mint); background: rgba(66,226,184,0.10); border: 1px solid rgba(66,226,184,0.45);
+        }
+        .sec-title { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 15.5px; color: var(--ink); }
+        .sec-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+
+        .item-title { font-family: 'Montserrat', sans-serif; font-weight: 600; font-size: 13.5px; color: var(--ink); }
+        .item-body  { font-size: 12.8px; line-height: 1.68; color: var(--ink-soft); font-weight: 400; }
+        .item-body strong { color: #dcdce0; font-weight: 600; }
+
+        /* Chip de ícono para cards */
+        .icon-chip {
+            width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+            color: var(--purple); font-size: 12px;
+        }
+
+        /* Bullets de marca */
+        ul.brand-list { list-style: none; padding: 0; margin: 0; }
+        ul.brand-list > li { position: relative; padding-left: 18px; margin-bottom: 8px; }
+        ul.brand-list > li::before {
+            content: ''; position: absolute; left: 2px; top: 8px; width: 6px; height: 6px;
+            border-radius: 2px; background: linear-gradient(135deg, var(--purple), var(--mint));
+        }
+
+        /* Pie de página */
+        .page-foot {
+            display: flex; justify-content: space-between; align-items: center;
+            border-top: 1px solid var(--line); padding-top: 12px; margin-top: auto;
+            font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+            font-weight: 600; color: var(--ink-faint);
+        }
+
+        /* ==================== CAMPOS EDITABLES ==================== */
+        [contenteditable="true"] { outline: none; border-radius: 5px; transition: box-shadow .15s, background .15s; }
+        [contenteditable="true"]:hover  { background-color: rgba(255,255,255,0.05); cursor: text; }
+        [contenteditable="true"]:focus  { background-color: rgba(255,255,255,0.07); box-shadow: 0 0 0 2px rgba(66,226,184,0.45); }
+
+        /* Guías de margen */
+        .margin-guide::after {
+            content: ''; position: absolute; inset: 16mm; border: 1px dashed rgba(66,226,184,0.30);
+            pointer-events: none; z-index: 40;
+        }
+
+        /* Checkbox de selección de página (para exportar imágenes).
+           Va AFUERA de la hoja, arriba a la izquierda. */
+        .page-select {
+            display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px;
+            background: rgba(10,10,12,0.7);
+            -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+            border: 1px solid var(--line-strong); border-radius: 9px; padding: 7px 12px;
+            font-size: 12px; color: var(--ink-soft); font-weight: 600; cursor: pointer;
+        }
+        .page-select input { width: 16px; height: 16px; accent-color: var(--mint); cursor: pointer; }
+
+        /* ===================== ZOOM ===================== */
+        .zoom-50 { transform: scale(0.5); }  .zoom-60 { transform: scale(0.6); }
+        .zoom-70 { transform: scale(0.7); }  .zoom-80 { transform: scale(0.8); }
+        .zoom-90 { transform: scale(0.9); }  .zoom-100 { transform: scale(1); }
+        .zoom-125 { transform: scale(1.25); } .zoom-150 { transform: scale(1.5); }
+        .zoom-175 { transform: scale(1.75); } .zoom-200 { transform: scale(2); }
+        [class*="zoom-"] { transform-origin: top center; }
+
+        /* ============ MODO EXPORTACIÓN (imagen) / IMPRESIÓN ============
+           Aplana el glass a relleno sólido y oculta controles, para que la captura
+           (html-to-image) y el PDF salgan limpios y fieles. */
+        body.exporting .no-print,
+        body.exporting .page-select { display: none !important; }
+        body.exporting .glass {
+            -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+            background: rgba(255,255,255,0.05) !important;
+        }
+        body.exporting .page-container { box-shadow: none !important; border: none !important; }
+
+        @media print {
+            .glass {
+                -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+                background: rgba(255,255,255,0.05) !important;
+            }
+            html, body { background: #ffffff !important; margin: 0 !important; padding: 0 !important;
+                -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .no-print, .page-select { display: none !important; }
+            .print-wrapper { padding: 0 !important; margin: 0 !important; background: none !important; }
+            #documentScaleContainer { transform: none !important; gap: 0 !important; }
+            .page-container {
+                width: var(--page-w) !important; height: var(--page-h) !important;
+                margin: 0 !important; border: none !important; border-radius: 0 !important; box-shadow: none !important;
+                transform: none !important; contain: none !important;
+                page-break-after: always; break-after: page;
+            }
+            .page-container:last-child { page-break-after: auto; break-after: auto; }
+            [contenteditable="true"]:hover, [contenteditable="true"]:focus { background-color: transparent !important; box-shadow: none !important; }
+            /* Default A4 vertical. Para otro tamaño (Carta, apaisado, custom en px),
+               cambiá este valor Y --page-w/--page-h en :root arriba. */
+            @page { size: A4 portrait; margin: 0; }
+        }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ============================================================= -->
+    <!-- BARRA DE HERRAMIENTAS (no imprimible)                          -->
+    <!-- ============================================================= -->
+    <header class="no-print sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/10 px-6 py-3.5">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 border border-white/10">
+                    <i class="fa-solid fa-file-lines text-[15px]" style="color:var(--purple)"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-semibold text-[15px] leading-tight text-neutral-100 font-display">Editor de Documento</h1>
+                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style="background:rgba(66,226,184,0.12);color:var(--mint)">
+                            <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--mint)"></span> Edición activa
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-neutral-500">Hacé clic sobre cualquier texto para editarlo antes de exportar</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Zoom -->
+                <div class="flex items-center gap-2 bg-neutral-900 rounded-lg px-2 py-1.5 border border-neutral-800">
+                    <span class="text-[11px] font-semibold text-neutral-400">Zoom</span>
+                    <select id="zoomSelector" onchange="changeZoom(this.value)" class="bg-neutral-950 text-[11px] text-neutral-100 border border-neutral-800 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#42e2b8] cursor-pointer">
+                        <option value="zoom-50">50%</option><option value="zoom-60">60%</option>
+                        <option value="zoom-70">70%</option><option value="zoom-80">80%</option>
+                        <option value="zoom-90">90%</option><option value="zoom-100" selected>100%</option>
+                        <option value="zoom-125">125%</option><option value="zoom-150">150%</option>
+                        <option value="zoom-175">175%</option><option value="zoom-200">200%</option>
+                    </select>
+                </div>
+
+                <button onclick="toggleMargins()" id="btnMargins" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-[11px] font-medium px-3.5 py-2 rounded-lg flex items-center gap-2 transition">
+                    <i class="fa-solid fa-border-none text-neutral-500"></i><span>Márgenes</span>
+                </button>
+
+                <!-- Formato de descarga de imagen -->
+                <div class="flex items-center gap-2 bg-neutral-900 rounded-lg px-2 py-1.5 border border-neutral-800">
+                    <span class="text-[11px] font-semibold text-neutral-400">Imagen</span>
+                    <select id="dlFormat" class="bg-neutral-950 text-[11px] text-neutral-100 border border-neutral-800 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#42e2b8] cursor-pointer">
+                        <option value="png1" selected>PNG 1x</option>
+                        <option value="png2">PNG 2x</option>
+                        <option value="png3">PNG 3x</option>
+                        <option value="jpg">JPG (menor calidad)</option>
+                    </select>
+                    <label class="flex items-center gap-1 text-[11px] text-neutral-400 cursor-pointer pl-1 border-l border-neutral-800">
+                        <input type="checkbox" id="onlySelected" style="accent-color:var(--mint)"> Solo selecc.
+                    </label>
+                </div>
+
+                <button onclick="downloadImages()" id="btnImages" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 text-[11px] font-semibold px-3.5 py-2 rounded-lg flex items-center gap-2 transition">
+                    <i class="fa-solid fa-image" style="color:var(--mint)"></i><span>Descargar imágenes</span>
+                </button>
+
+                <!-- PDF (botón primario) -->
+                <button onclick="triggerPrint()" class="bg-white hover:bg-neutral-200 text-black text-[11px] font-bold px-5 py-2 rounded-lg flex items-center gap-2 transition shadow-lg">
+                    <i class="fa-solid fa-arrow-down-to-line"></i><span>Descargar PDF</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Fila de formato de texto -->
+        <div class="max-w-7xl mx-auto mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px]">
+            <span class="font-semibold text-neutral-400 flex items-center gap-1.5"><i class="fa-solid fa-palette text-neutral-500"></i> Color de texto</span>
+            <div class="flex items-center gap-1.5">
+                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#ededed')" title="Blanco" class="w-5 h-5 rounded-full border border-white/20" style="background:#ededed"></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#a1a1aa')" title="Gris" class="w-5 h-5 rounded-full border border-white/20" style="background:#a1a1aa"></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#42e2b8')" title="Mint" class="w-5 h-5 rounded-full border border-white/20" style="background:#42e2b8"></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#e1b6ff')" title="Violeta" class="w-5 h-5 rounded-full border border-white/20" style="background:#e1b6ff"></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#7b3fe4')" title="Violeta intenso" class="w-5 h-5 rounded-full border border-white/20" style="background:#7b3fe4"></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#fbbf24')" title="Ámbar" class="w-5 h-5 rounded-full border border-white/20" style="background:#fbbf24"></button>
+            </div>
+            <label class="flex items-center gap-1.5 text-neutral-400 cursor-pointer"><span>Personalizado</span>
+                <input type="color" oninput="applyColor(this.value)" value="#42e2b8" class="w-6 h-6 rounded cursor-pointer bg-transparent border border-neutral-700 p-0">
+            </label>
+            <span class="w-px h-5 bg-white/10"></span>
+            <button type="button" onmousedown="event.preventDefault()" onclick="resetColor()" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium px-3 py-1.5 rounded-lg flex items-center gap-2 transition">
+                <i class="fa-solid fa-rotate-left text-neutral-500"></i><span>Restablecer</span>
+            </button>
+            <span class="text-neutral-600 hidden lg:inline">Consejo: seleccioná el texto (o hacé clic en el bloque) y elegí un color.</span>
+        </div>
+    </header>
+
+    <!-- ============================================================= -->
+    <!-- DOCUMENTO                                                      -->
+    <!-- ============================================================= -->
+    <main class="flex-1 print-wrapper flex flex-col items-center justify-start gap-14 py-14 px-4">
+        <div id="documentScaleContainer" class="flex flex-col gap-14 transition-all duration-300 zoom-100">
+
+            <!-- ================= PÁGINA 1 · PORTADA (opcional) ================= -->
+            <!-- Si el documento NO lleva portada, borrá este .page-wrap entero. -->
+            <div class="page-wrap">
+            <label class="page-select no-print"><input type="checkbox" checked> Pág. 1</label>
+            <article class="page-container" id="page-1">
+
+                <div class="page-pad-cover flex flex-col h-full">
+                    <!-- Marca -->
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <img src="../assets/logo.png" alt="logo" class="h-9 w-9 object-contain rounded-lg shrink-0" onerror="this.style.display='none'">
+                            <span contenteditable="true" class="font-display font-bold text-[16px] text-white">Piensa Digital AI</span>
+                        </div>
+                    </div>
+
+                    <!-- Héroe -->
+                    <div class="flex-1 flex flex-col justify-center">
+                        <div class="mb-8">
+                            <span class="pill pill-mint" style="box-shadow:0 0 18px rgba(66,226,184,0.25)">
+                                <span contenteditable="true">Optimización Continua</span> <!-- ej: "Optimización Continua" -->
+                            </span>
+                        </div>
+                        <!-- Título en blanco. Se le puede cambiar el color desde la barra
+                             (como a cualquier texto). Si alguna vez querés el gradiente de
+                             marca, agregale la clase text-gradient a una línea. -->
+                        <h1 class="font-display font-extrabold leading-[1.05] tracking-tight" style="font-size:52px">
+                            <span contenteditable="true" class="block text-white">Informe de</span>
+                            <span contenteditable="true" class="block text-white">Optimización y Mejoras</span>
+                        </h1>
+                        <p contenteditable="true" class="mt-6 text-[15px] max-w-[70%] leading-relaxed" style="color:var(--ink-soft)">
+                            Asistente Digital corporativo de Sanz Clima — evolución de producto, rendimiento y seguridad.
+                        </p>
+                    </div>
+
+                    <!-- Ficha de metadatos (glass) -->
+                    <div class="glass glass-topline p-6 grid grid-cols-2 gap-x-6 gap-y-5">
+                        <div class="pr-6 border-r border-white/10">
+                            <div class="eyebrow mb-1.5">Cliente</div>
+                            <div contenteditable="true" class="text-[15px] font-semibold text-neutral-100">Asistente Digital Sanz Clima</div>
+                        </div>
+                        <div class="pl-1">
+                            <div class="eyebrow mb-1.5">Período</div>
+                            <div contenteditable="true" class="text-[15px] font-semibold text-neutral-100">Julio 2026</div>
+                        </div>
+                        <div class="col-span-2 h-px bg-white/10"></div>
+                        <div class="col-span-2">
+                            <div class="eyebrow mb-1.5">Responsable</div>
+                            <div contenteditable="true" class="text-[14px] font-medium text-white">Equipo de Desarrollo · Piensa Digital AI</div>
+                        </div>
+                    </div>
+
+                    <div class="page-foot" style="margin-top:26px">
+                        <span contenteditable="true">Informe de Optimización y Mejoras — Julio 2026</span>
+                        <span>Página 1 de 2</span>
+                    </div>
+                </div>
+            </article>
+            </div><!-- /page-wrap -->
+
+            <!-- ============ PÁGINA 2 · CONTENIDO (patrón de bloques) ============
+                 Duplicá este .page-wrap entero por cada hoja de contenido. Actualizá:
+                 el id (page-3, page-4...), el fondo (regla #page-N arriba, cicla bg2..bg4),
+                 el número de página del footer, y el checkbox "Pág. N". -->
+            <div class="page-wrap">
+            <label class="page-select no-print"><input type="checkbox" checked> Pág. 2</label>
+            <article class="page-container" id="page-2">
+
+                <div class="page-pad flex flex-col h-full">
+                    <div class="running-head">
+                        <div>
+                            <div class="eyebrow mb-1" style="color:var(--purple)">Informe de Avance</div>
+                            <div contenteditable="true" class="font-display font-semibold text-[15px] text-neutral-100">Asistente Digital Sanz Clima</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="eyebrow mb-1">Desarrollado por</div>
+                            <div contenteditable="true" class="text-[13px] font-semibold text-neutral-200">Piensa Digital AI</div>
+                        </div>
+                    </div>
+
+                    <!-- Bloque destacado (resumen/intro) -->
+                    <div class="glass glass-topline p-5 mb-7">
+                        <h3 class="flex items-center gap-2 mb-2.5">
+                            <i class="fa-solid fa-bolt text-[12px]" style="color:var(--mint)"></i>
+                            <span contenteditable="true" class="font-display font-bold text-[13px] uppercase tracking-wider" style="color:var(--mint)">Resumen</span>
+                        </h3>
+                        <p contenteditable="true" class="item-body" style="font-size:13.2px">Durante julio completamos la puesta en marcha del <strong>sistema de seguimiento automático de uso</strong>, ya 100% operativo. En paralelo afinamos la precisión operativa y la facilidad de uso del Asistente: optimizamos el procesamiento de contexto para acelerar respuestas, sumamos botones de interacción rápida y corregimos desvíos puntuales.</p>
+                    </div>
+
+                    <!-- Sección numerada -->
+                    <div class="sec-head mb-5">
+                        <span class="sec-num">1</span>
+                        <h2 contenteditable="true" class="sec-title">Experiencia de Usuario e Interacción Más Fluida</h2>
+                    </div>
+
+                    <div class="flex-1 space-y-4">
+                        <!-- Card con ícono (duplicá por cada ítem) -->
+                        <div class="glass p-4 flex gap-3.5">
+                            <span class="icon-chip"><i class="fa-solid fa-circle-check"></i></span>
+                            <div class="space-y-1.5">
+                                <h4 contenteditable="true" class="item-title">Implementación completada</h4>
+                                <p contenteditable="true" class="item-body">Finalizamos el desarrollo e integración del sistema de seguimiento automático de adopción y uso. Las funciones ya se encuentran <strong>totalmente operativas y en producción</strong>, permitiendo auditar la interacción de los usuarios de forma autónoma.</p>
+                            </div>
+                        </div>
+
+                        <!-- Ejemplo con bullets de marca -->
+                        <div class="glass p-4">
+                            <h4 contenteditable="true" class="item-title mb-2">Otras mejoras de interacción</h4>
+                            <ul class="brand-list item-body">
+                                <li contenteditable="true"><strong>Botones de respuesta rápida</strong> (Sí/No) directamente en el chat de Telegram.</li>
+                                <li contenteditable="true"><strong>Validación inteligente de clientes</strong>: verificación en segundo plano y confirmación final.</li>
+                                <li contenteditable="true"><strong>Interpretación avanzada de mensajes</strong>: entiende la intención aunque no sea 100% explícita.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="page-foot">
+                        <span contenteditable="true">Informe de Optimización y Mejoras — Julio 2026</span>
+                        <span>Página 2 de 2</span>
+                    </div>
+                </div>
+            </article>
+            </div><!-- /page-wrap -->
+
+        </div>
+    </main>
+
+    <script>
+        /* ---------- Formato de texto (color) ---------- */
+        let lastEditable = null, savedRange = null;
+        document.addEventListener('selectionchange', () => {
+            const sel = document.getSelection();
+            if (!sel || !sel.rangeCount) return;
+            let node = sel.anchorNode; if (node && node.nodeType === 3) node = node.parentElement;
+            const ed = node && node.closest ? node.closest('[contenteditable="true"]') : null;
+            if (ed) { lastEditable = ed; savedRange = sel.getRangeAt(0).cloneRange(); }
+        });
+        function restoreSelection() { if (!savedRange) return; const s = document.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+        function stripGradient(el) { el.classList.remove('text-gradient'); el.style.backgroundImage = 'none'; el.style.webkitTextFillColor = 'currentColor'; }
+        function applyColor(color) {
+            if (!lastEditable) return;
+            restoreSelection();
+            const sel = document.getSelection();
+            stripGradient(lastEditable);
+            if (sel && !sel.isCollapsed && lastEditable.contains(sel.anchorNode)) {
+                try { document.execCommand('styleWithCSS', false, true); } catch (e) {}
+                document.execCommand('foreColor', false, color);
+            } else { lastEditable.style.color = color; }
+        }
+        // Recordar el gradiente original de cada bloque para poder restaurarlo
+        document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+            el.dataset.origGradient = el.classList.contains('text-gradient') ? '1' : '0';
+        });
+        function resetColor() {
+            if (!lastEditable) return; const el = lastEditable;
+            el.querySelectorAll('font').forEach(f => { const s = document.createElement('span'); s.innerHTML = f.innerHTML; f.replaceWith(s); });
+            el.querySelectorAll('[style]').forEach(n => { n.style.color=''; n.style.webkitTextFillColor=''; n.style.backgroundImage=''; if (!n.getAttribute('style')) n.removeAttribute('style'); });
+            el.style.color=''; el.style.webkitTextFillColor=''; el.style.backgroundImage='';
+            if (el.dataset.origGradient === '1') el.classList.add('text-gradient'); else el.classList.remove('text-gradient');
+        }
+
+        /* ---------- Vista ---------- */
+        function changeZoom(z) { const c = document.getElementById('documentScaleContainer'); c.className = c.className.replace(/zoom-\d+/g, '').trim(); c.classList.add(z); }
+        function toggleMargins() {
+            const pages = document.querySelectorAll('.page-container'), btn = document.getElementById('btnMargins');
+            const active = !pages[0].classList.contains('margin-guide');
+            pages.forEach(p => p.classList.toggle('margin-guide', active));
+            btn.innerHTML = active ? '<i class="fa-solid fa-border-all" style="color:var(--mint)"></i><span>Márgenes</span>'
+                                   : '<i class="fa-solid fa-border-none text-neutral-500"></i><span>Márgenes</span>';
+        }
+        function triggerPrint() { try { window.print(); } catch (e) { console.warn('Impresión bloqueada por el entorno.'); } }
+
+        /* ---------- Descarga como imagen (html-to-image) ---------- */
+        function pageNumberOf(p) { const m = (p.id || '').match(/\d+/); return m ? m[0] : '1'; }
+        function downloadDataUrl(dataUrl, name) {
+            const a = document.createElement('a'); a.href = dataUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        }
+        async function downloadImages() {
+            if (typeof htmlToImage === 'undefined') { alert('La librería de exportación no cargó. Abrí el documento final (no el template) en tu navegador.'); return; }
+            const scaleMap = { png1: 1, png2: 2, png3: 3, jpg: 2 };
+            const fmt = document.getElementById('dlFormat').value;
+            const onlySelected = document.getElementById('onlySelected').checked;
+            let pages = [...document.querySelectorAll('.page-container')];
+            if (onlySelected) pages = pages.filter(p => {
+                const wrap = p.closest('.page-wrap');
+                const cb = wrap && wrap.querySelector('.page-select input');
+                return cb && cb.checked;
+            });
+            if (!pages.length) { alert('No hay páginas seleccionadas.'); return; }
+
+            const btn = document.getElementById('btnImages'); const original = btn.innerHTML;
+            btn.disabled = true;
+            document.body.classList.add('exporting');
+            try {
+                for (const p of pages) {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Exportando ' + pageNumberOf(p) + '…</span>';
+                    const opts = { pixelRatio: scaleMap[fmt], cacheBust: true, width: p.offsetWidth, height: p.offsetHeight,
+                                   style: { transform: 'none', margin: '0' } };
+                    let dataUrl, ext;
+                    if (fmt === 'jpg') { dataUrl = await htmlToImage.toJpeg(p, Object.assign({}, opts, { quality: 0.92, backgroundColor: '#0a0a0a' })); ext = 'jpg'; }
+                    else { dataUrl = await htmlToImage.toPng(p, opts); ext = 'png'; }
+                    downloadDataUrl(dataUrl, 'pagina-' + pageNumberOf(p) + '.' + ext);
+                    await new Promise(r => setTimeout(r, 150));
+                }
+            } catch (e) {
+                console.error(e); alert('Hubo un problema al exportar las imágenes. Ver consola.');
+            } finally {
+                document.body.classList.remove('exporting'); btn.disabled = false; btn.innerHTML = original;
+            }
+        }
+    </script>
+</body>
+</html>
