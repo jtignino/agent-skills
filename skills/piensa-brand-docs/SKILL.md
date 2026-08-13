@@ -34,6 +34,12 @@ y desde una **barra de herramientas** exporta a **PDF** o a **imagen** (PNG/JPG)
   gigante a mano.
 - **El texto es siempre vectorial** en el PDF (nítido y seleccionable). Sólo el fondo es
   imagen.
+- **Todos los scripts son Node.js, sin dependencias externas** (sólo `fs`/`path`/`http` de
+  la librería estándar). Esto es a propósito: como la skill se instala vía `npx skills add`,
+  Node ya está garantizado en la máquina — no hay que asumir que la persona tiene Python
+  instalado, ni pedirle que instale nada. La única excepción es `bake-backgrounds.js`
+  (sólo hace falta para tamaños que no sean A4), que necesita un navegador Chromium
+  instalado — ver el paso 3.
 
 ## Identidad visual (resumen)
 
@@ -82,11 +88,17 @@ salida/
 
 ### 3. (Sólo si el tamaño NO es A4) hornear los fondos
 ```bash
-python scripts/bake_backgrounds.py --width <W> --height <H> --count <N> --scale <S> --out salida/assets/backgrounds/custom
+node scripts/bake-backgrounds.js --width <W> --height <H> --count <N> --scale <S> --out salida/assets/backgrounds/custom
 ```
 Usá `--scale 1.5` para tamaños tipo papel (más nitidez), `--scale 1` para social ya grande.
 Luego, en `working.html`, apuntá las reglas `#page-N { background-image: url("./assets/backgrounds/custom/bgN.png") }`
 y actualizá `--page-w` / `--page-h` en `:root` y el `@page { size: ... }`.
+
+Este script necesita un navegador Chromium (Chrome, Edge o Chromium) instalado en la máquina
+para rasterizar el degradado — es el único requisito externo real de toda la skill. Si no lo
+encuentra, lo dice claramente en la consola. En Windows casi nunca falta (viene Edge de
+fábrica); si igual faltara y el documento es tamaño papel, usá directamente los fondos ya
+horneados en `assets/backgrounds/a4/` sin necesidad de este paso.
 
 ### 4. Editar el contenido (la estructura NO es rígida)
 `template.html` trae **dos hojas de ejemplo** (portada + una página de contenido con los
@@ -119,14 +131,32 @@ independiente para que el PDF mantenga los saltos de página.
 Este paso es **parte de entregar el documento**, no opcional. Apenas termines de editar el
 contenido, corré el build automáticamente y entregá el archivo compilado:
 ```bash
-python scripts/build_document.py salida/working.html salida/Documento.html
+node scripts/build-document.js salida/working.html salida/Documento.html
 ```
 Esto incrusta todo (fuentes, fondos, logo, Tailwind, librería de export) y produce el HTML
 autocontenido (pesa varios MB por los fondos: es normal y esperado). **Entregá
 `Documento.html`** — nunca el `working.html`, porque sin los assets al lado se ve sin estilos
 y la descarga de imágenes no funciona (el navegador bloquea el canvas con archivos externos).
 
-### 6. Exportar (lo hace la persona desde la barra)
+### 6. Previsualizar/verificar SIEMPRE por localhost, nunca con file://
+Si necesitás abrir el documento en un navegador para revisarlo vos mismo (por ejemplo con una
+herramienta de automatización/screenshot antes de entregarlo), **serví la carpeta por HTTP**:
+```bash
+node scripts/serve.js salida/ 8080
+```
+y abrí `http://localhost:8080/Documento.html` (o `working.html` mientras editás). **No abras
+el archivo con `file://`.** Dos razones concretas:
+- Las herramientas de navegador automatizado (Playwright y similares) suelen **bloquear
+  `file://` por seguridad** — la carga falla o queda en blanco, no es un bug del documento.
+- Mientras trabajás sobre `working.html` (antes del build), el navegador puede negarse a
+  cargar sus referencias relativas a `./assets/...` bajo `file://` según la configuración de
+  seguridad; por HTTP siempre funciona.
+`serve.js` no tiene dependencias (sólo Node), corré el comando en segundo plano y seguí
+trabajando. Esto es sólo para TU verificación — la persona que reciba `Documento.html` sí
+puede abrirlo con doble clic normalmente en su propio navegador (es autocontenido, no
+depende de ningún servidor).
+
+### 7. Exportar (lo hace la persona desde la barra)
 - **Descargar PDF**: botón blanco → diálogo del navegador → *Guardar como PDF · Márgenes:
   Ninguno · Gráficos de fondo: ✓*. Texto vectorial, fondo imagen, idéntico en todo visor.
 - **Descargar imágenes**: elegir formato (**PNG 1x** default, PNG 2x, PNG 3x, o **JPG**
@@ -161,10 +191,11 @@ piensa-brand-docs/
 │   ├── lib/                  # tailwind.js + html-to-image.js (offline)
 │   └── backgrounds/
 │       ├── a4/ bg1..bg4.png  # fondos horneados A4 (1.5x)
-│       └── _source.html      # generador de fondos (lo usa bake_backgrounds.py)
-├── scripts/
-│   ├── build_document.py     # working.html + assets → HTML autocontenido
-│   └── bake_backgrounds.py   # hornea fondos a cualquier tamaño
+│       └── _source.html      # generador de fondos (lo usa bake-backgrounds.js)
+├── scripts/                  # todo Node.js puro, cero dependencias externas
+│   ├── build-document.js     # working.html + assets → HTML autocontenido (SIEMPRE)
+│   ├── bake-backgrounds.js   # hornea fondos a cualquier tamaño (sólo si no es A4)
+│   └── serve.js               # servidor estático mínimo, para previsualizar por localhost
 └── resources/                # dropzone: el usuario deja acá imágenes/logos a usar
 ```
 
