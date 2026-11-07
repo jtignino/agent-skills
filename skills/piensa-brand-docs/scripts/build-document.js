@@ -1,23 +1,32 @@
 #!/usr/bin/env node
 /**
  * build-document.js — Convierte el HTML de trabajo (que referencia ./assets/...) en un
- * documento FINAL autocontenido: incrusta fuentes, fondos, logo, Tailwind y html-to-image
- * como data URIs / inline. El resultado es un único .html que:
- *   - funciona 100% offline
+ * documento FINAL autocontenido: incrusta hojas de estilo (fuentes, editor), scripts
+ * (Tailwind, html-to-image, editor) e imágenes (fondos, logo) como inline / data URIs.
+ * El resultado es un único .html que:
+ *   - funciona 100% offline y desde cualquier carpeta
  *   - se ve idéntico en todos los visores (fondos rasterizados)
  *   - permite la descarga como imagen del lado del cliente (sin "tainted canvas")
+ *   - queda marcado como copia compilada (<html data-pd-compiled>): el editor lo
+ *     muestra como "Copia compilada" y el servidor nunca lo sobrescribe.
  *
- * Sin dependencias externas — sólo Node.js estándar (fs/path), que ya está garantizado
- * en cualquier máquina donde se instaló esta skill vía `npx skills add`.
+ * Sin dependencias externas — sólo Node.js estándar (fs/path).
  *
  * Uso:
  *   node scripts/build-document.js <trabajo.html> <salida.html>
+ * También lo usa serve.js (require) para recompilar después de cada guardado.
  *
- * El HTML de trabajo debe estar junto a la carpeta assets/ (o referenciar rutas relativas
- * válidas). Las rutas relativas se resuelven contra la ubicación del HTML de trabajo.
+ * Las rutas relativas se resuelven contra la ubicación del HTML de trabajo.
+ *
+ * Si el HTML de trabajo declara <meta name="pd-md-master" content="ruta.md">, cada
+ * compilado también reescribe ese MD con el texto actual del documento (export-md.js,
+ * que vive al lado de este archivo). Si export-md.js no está, se compila igual.
  */
 const fs = require('fs');
 const path = require('path');
+
+let exportMd = null;
+try { exportMd = require(path.join(__dirname, 'export-md.js')).syncMaster; } catch (e) { /* sin copia en Markdown */ }
 
 const MIME = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
@@ -31,38 +40,34 @@ function dataUri(filePath) {
   return 'data:' + mime + ';base64,' + b64;
 }
 
-function main() {
-  const [, , src, out] = process.argv;
-  if (!src || !out) {
-    console.error('Uso: node build-document.js <trabajo.html> <salida.html>');
-    process.exit(1);
-  }
+function build(src, out, opts) {
+  opts = opts || {};
   const base = path.dirname(path.resolve(src));
   let html = fs.readFileSync(src, 'utf8');
-
+  const source = html;
   const resolve = (rel) => path.join(base, rel.replace(/^\.?\//, ''));
 
-  // 1) Inline fonts.css como <style>
+  // 1) Hojas de estilo locales (fonts.css, editor/editor.css...) → <style>
   html = html.replace(
-    /<link[^>]*href=["']\.?\/?assets\/fonts\.css["'][^>]*>/,
-    (m) => {
-      const p = resolve('assets/fonts.css');
-      if (!fs.existsSync(p)) return m;
+    /<link\b[^>]*\bhref=["'](\.?\/?assets\/[^"']+\.css)["'][^>]*>/gi,
+    (m, rel) => {
+      const p = resolve(rel);
+      if (!/rel=["']stylesheet["']/i.test(m) || !fs.existsSync(p)) return m;
       return '<style>\n' + fs.readFileSync(p, 'utf8') + '\n</style>';
     }
   );
 
-  // 2) Inline scripts JS (tailwind, html-to-image)
-  for (const jsRel of ['assets/lib/tailwind.js', 'assets/lib/html-to-image.js']) {
-    const re = new RegExp('<script[^>]*src=["\']\\.?/?' + jsRel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '["\'][^>]*>\\s*</script>');
-    html = html.replace(re, (m) => {
-      const p = resolve(jsRel);
+  // 2) Scripts locales (tailwind, html-to-image, editor/editor.js...) → <script> inline
+  html = html.replace(
+    /<script\b[^>]*\bsrc=["'](\.?\/?assets\/[^"']+\.js)["'][^>]*>\s*<\/script>/gi,
+    (m, rel) => {
+      const p = resolve(rel);
       if (!fs.existsSync(p)) return m;
-      return '<script>\n' + fs.readFileSync(p, 'utf8') + '\n</script>';
-    });
-  }
+      return '<script>\n' + fs.readFileSync(p, 'utf8').replace(/<\/script/gi, '<\\/script') + '\n</script>';
+    }
+  );
 
-  // 3) Inline imágenes: url("./assets/....png|jpg|jpeg|webp|svg") y src="./assets/...."
+  // 3) Imágenes: url("./assets/....png|jpg|jpeg|webp|svg") y src="./assets/...."
   html = html.replace(
     /url\(["']?(\.?\/?assets\/[^"')]+\.(?:png|jpe?g|webp|svg))["']?\)/gi,
     (m, rel) => {
@@ -78,15 +83,43 @@ function main() {
     }
   );
 
-  fs.writeFileSync(out, html, 'utf8');
+  // 4) Marca de copia compilada
+  if (!/<html\b[^>]*\bdata-pd-compiled\b/i.test(html)) {
+    html = html.replace(/<html\b/i, '<html data-pd-compiled="true"');
+  }
+
+  // Escritura atómica: el navegador nunca ve un archivo a medio escribir
+  const tmp = out + '.tmp-' + process.pid;
+  fs.writeFileSync(tmp, html, 'utf8');
+  try { fs.renameSync(tmp, out); }
+  catch (e) { fs.writeFileSync(out, html, 'utf8'); try { fs.unlinkSync(tmp); } catch (_) {} }
 
   const sizeMb = (fs.statSync(out).size / 1024 / 1024).toFixed(2);
-  console.log('OK -> ' + out + ' (' + sizeMb + ' MB)');
-  const remaining = html.match(/(?:url\(["']?|src=["'])\.?\/?assets\/[^"')]+/g) || [];
-  if (remaining.length) {
-    console.log('AVISO: quedaron referencias a assets sin incrustar:');
-    remaining.slice(0, 10).forEach((r) => console.log('   ', r));
+  const remaining = html.match(/(?:url\(["']?|src=["']|href=["'])\.?\/?assets\/[^"')]+/g) || [];
+
+  // 5) Copia en Markdown (sólo si el documento declara <meta name="pd-md-master">)
+  const md = exportMd ? exportMd(path.resolve(src), source) : null;
+
+  if (!opts.quiet) {
+    console.log('OK -> ' + out + ' (' + sizeMb + ' MB)');
+    if (remaining.length) {
+      console.log('AVISO: quedaron referencias a assets sin incrustar:');
+      remaining.slice(0, 10).forEach((r) => console.log('   ', r));
+    }
+    if (md && md.status === 'actualizado') console.log('MD actualizado -> ' + md.md);
+    else if (md && md.status === 'sin-cambios') console.log('MD sin cambios -> ' + md.md);
+    else if (md && md.status === 'omitido') console.log('AVISO: no se actualizó el MD: ' + md.reason);
   }
+  return { out, sizeMb, remaining, md };
 }
 
-main();
+if (require.main === module) {
+  const [, , src, out] = process.argv;
+  if (!src || !out) {
+    console.error('Uso: node build-document.js <trabajo.html> <salida.html>');
+    process.exit(1);
+  }
+  build(src, out);
+}
+
+module.exports = { build };

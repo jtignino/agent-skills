@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- {{DOCUMENT_TITLE}} = título que aparece en la pestaña del navegador -->
     <title>{{DOCUMENT_TITLE}}</title>
+    <!-- Nombre del HTML compilado que el editor regenera en cada guardado (misma carpeta) -->
+    <meta name="pd-build-output" content="{{OUTPUT_FILE}}">
 
     <!-- Assets locales (el script build-document.js los INCRUSTA en el archivo final).
          Tailwind y html-to-image quedan embebidos → documento 100% offline. -->
     <link rel="stylesheet" href="./assets/fonts.css">
+    <link rel="stylesheet" href="./assets/editor/editor.css">
     <script src="./assets/lib/tailwind.js"></script>
     <script src="./assets/lib/html-to-image.js"></script>
 
@@ -246,9 +249,8 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="font-semibold text-[15px] leading-tight text-neutral-100 font-display">Editor de Documento</h1>
-                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style="background:rgba(66,226,184,0.12);color:var(--mint)">
-                            <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--mint)"></span> Edición activa
-                        </span>
+                        <!-- Estado del guardado (lo completa assets/editor/editor.js) -->
+                        <span id="pdEditorStatus" class="no-print"></span>
                     </div>
                     <p class="text-[11px] text-neutral-500">Hacé clic sobre cualquier texto para editarlo antes de exportar</p>
                 </div>
@@ -298,6 +300,9 @@
 
         <!-- Fila de formato de texto -->
         <div class="max-w-7xl mx-auto mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px]">
+            <!-- Deshacer / rehacer / restablecer (lo completa assets/editor/editor.js) -->
+            <div id="pdEditorHistory"></div>
+            <span class="w-px h-5 bg-white/10"></span>
             <span class="font-semibold text-neutral-400 flex items-center gap-1.5"><i class="fa-solid fa-palette text-neutral-500"></i> Color de texto</span>
             <div class="flex items-center gap-1.5">
                 <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#ededed')" title="Blanco" class="w-5 h-5 rounded-full border border-white/20" style="background:#ededed"></button>
@@ -311,8 +316,8 @@
                 <input type="color" oninput="applyColor(this.value)" value="#42e2b8" class="w-6 h-6 rounded cursor-pointer bg-transparent border border-neutral-700 p-0">
             </label>
             <span class="w-px h-5 bg-white/10"></span>
-            <button type="button" onmousedown="event.preventDefault()" onclick="resetColor()" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium px-3 py-1.5 rounded-lg flex items-center gap-2 transition">
-                <i class="fa-solid fa-rotate-left text-neutral-500"></i><span>Restablecer</span>
+            <button type="button" onmousedown="event.preventDefault()" onclick="resetColor()" title="Quita el color aplicado al texto seleccionado (o al bloque)" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium px-3 py-1.5 rounded-lg flex items-center gap-2 transition">
+                <i class="fa-solid fa-eraser text-neutral-500"></i><span>Quitar color</span>
             </button>
             <span class="text-neutral-600 hidden lg:inline">Consejo: seleccioná el texto (o hacé clic en el bloque) y elegí un color.</span>
         </div>
@@ -461,7 +466,7 @@
             if (ed) { lastEditable = ed; savedRange = sel.getRangeAt(0).cloneRange(); }
         });
         function restoreSelection() { if (!savedRange) return; const s = document.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
-        function stripGradient(el) { el.classList.remove('text-gradient'); el.style.backgroundImage = 'none'; el.style.webkitTextFillColor = 'currentColor'; }
+        function stripGradient(el) { if (!el.classList.contains('text-gradient')) return; el.classList.remove('text-gradient'); el.style.backgroundImage = 'none'; el.style.webkitTextFillColor = 'currentColor'; }
         function applyColor(color) {
             if (!lastEditable) return;
             restoreSelection();
@@ -534,5 +539,7 @@
             }
         }
     </script>
+    <!-- Editor: historial y guardado automático (ver SKILL.md, "Editor"). Va último. -->
+    <script src="./assets/editor/editor.js"></script>
 </body>
 </html>

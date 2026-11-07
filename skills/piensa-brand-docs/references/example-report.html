@@ -3,12 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Informe de Optimización y Mejoras — Sanz Clima (EJEMPLO) = título que aparece en la pestaña del navegador -->
-    <title>Informe de Optimización y Mejoras — Sanz Clima (EJEMPLO)</title>
+    <!-- Título que aparece en la pestaña del navegador. Documento de EJEMPLO con un cliente ficticio. -->
+    <title>Informe de Optimización y Mejoras — Distribuidora Ejemplo (ficticio)</title>
+    <!-- Nombre del HTML compilado que el editor regenera en cada guardado (misma carpeta) -->
+    <meta name="pd-build-output" content="{{OUTPUT_FILE}}">
 
     <!-- Assets locales (el script build-document.js los INCRUSTA en el archivo final).
          Tailwind y html-to-image quedan embebidos → documento 100% offline. -->
     <link rel="stylesheet" href="../assets/fonts.css">
+    <link rel="stylesheet" href="../assets/editor/editor.css">
     <script src="../assets/lib/tailwind.js"></script>
     <script src="../assets/lib/html-to-image.js"></script>
 
@@ -246,9 +249,8 @@
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="font-semibold text-[15px] leading-tight text-neutral-100 font-display">Editor de Documento</h1>
-                        <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full" style="background:rgba(66,226,184,0.12);color:var(--mint)">
-                            <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--mint)"></span> Edición activa
-                        </span>
+                        <!-- Estado del guardado (lo completa assets/editor/editor.js) -->
+                        <span id="pdEditorStatus" class="no-print"></span>
                     </div>
                     <p class="text-[11px] text-neutral-500">Hacé clic sobre cualquier texto para editarlo antes de exportar</p>
                 </div>
@@ -298,6 +300,9 @@
 
         <!-- Fila de formato de texto -->
         <div class="max-w-7xl mx-auto mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px]">
+            <!-- Deshacer / rehacer / restablecer (lo completa assets/editor/editor.js) -->
+            <div id="pdEditorHistory"></div>
+            <span class="w-px h-5 bg-white/10"></span>
             <span class="font-semibold text-neutral-400 flex items-center gap-1.5"><i class="fa-solid fa-palette text-neutral-500"></i> Color de texto</span>
             <div class="flex items-center gap-1.5">
                 <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#ededed')" title="Blanco" class="w-5 h-5 rounded-full border border-white/20" style="background:#ededed"></button>
@@ -311,8 +316,8 @@
                 <input type="color" oninput="applyColor(this.value)" value="#42e2b8" class="w-6 h-6 rounded cursor-pointer bg-transparent border border-neutral-700 p-0">
             </label>
             <span class="w-px h-5 bg-white/10"></span>
-            <button type="button" onmousedown="event.preventDefault()" onclick="resetColor()" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium px-3 py-1.5 rounded-lg flex items-center gap-2 transition">
-                <i class="fa-solid fa-rotate-left text-neutral-500"></i><span>Restablecer</span>
+            <button type="button" onmousedown="event.preventDefault()" onclick="resetColor()" title="Quita el color aplicado al texto seleccionado (o al bloque)" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium px-3 py-1.5 rounded-lg flex items-center gap-2 transition">
+                <i class="fa-solid fa-eraser text-neutral-500"></i><span>Quitar color</span>
             </button>
             <span class="text-neutral-600 hidden lg:inline">Consejo: seleccioná el texto (o hacé clic en el bloque) y elegí un color.</span>
         </div>
@@ -354,7 +359,7 @@
                             <span contenteditable="true" class="block text-white">Optimización y Mejoras</span>
                         </h1>
                         <p contenteditable="true" class="mt-6 text-[15px] max-w-[70%] leading-relaxed" style="color:var(--ink-soft)">
-                            Asistente Digital corporativo de Sanz Clima — evolución de producto, rendimiento y seguridad.
+                            Asistente Digital de Distribuidora Ejemplo S.A. — evolución de producto, rendimiento y seguridad.
                         </p>
                     </div>
 
@@ -362,11 +367,11 @@
                     <div class="glass glass-topline p-6 grid grid-cols-2 gap-x-6 gap-y-5">
                         <div class="pr-6 border-r border-white/10">
                             <div class="eyebrow mb-1.5">Cliente</div>
-                            <div contenteditable="true" class="text-[15px] font-semibold text-neutral-100">Asistente Digital Sanz Clima</div>
+                            <div contenteditable="true" class="text-[15px] font-semibold text-neutral-100">Asistente Digital · Distribuidora Ejemplo</div>
                         </div>
                         <div class="pl-1">
                             <div class="eyebrow mb-1.5">Período</div>
-                            <div contenteditable="true" class="text-[15px] font-semibold text-neutral-100">Julio 2026</div>
+                            <div contenteditable="true" class="text-[15px] font-semibold text-neutral-100">Marzo 2026</div>
                         </div>
                         <div class="col-span-2 h-px bg-white/10"></div>
                         <div class="col-span-2">
@@ -376,7 +381,7 @@
                     </div>
 
                     <div class="page-foot" style="margin-top:26px">
-                        <span contenteditable="true">Informe de Optimización y Mejoras — Julio 2026</span>
+                        <span contenteditable="true">Informe de Optimización y Mejoras — Marzo 2026</span>
                         <span>Página 1 de 2</span>
                     </div>
                 </div>
@@ -395,7 +400,7 @@
                     <div class="running-head">
                         <div>
                             <div class="eyebrow mb-1" style="color:var(--purple)">Informe de Avance</div>
-                            <div contenteditable="true" class="font-display font-semibold text-[15px] text-neutral-100">Asistente Digital Sanz Clima</div>
+                            <div contenteditable="true" class="font-display font-semibold text-[15px] text-neutral-100">Asistente Digital · Distribuidora Ejemplo</div>
                         </div>
                         <div class="text-right">
                             <div class="eyebrow mb-1">Desarrollado por</div>
@@ -409,13 +414,13 @@
                             <i class="fa-solid fa-bolt text-[12px]" style="color:var(--mint)"></i>
                             <span contenteditable="true" class="font-display font-bold text-[13px] uppercase tracking-wider" style="color:var(--mint)">Resumen</span>
                         </h3>
-                        <p contenteditable="true" class="item-body" style="font-size:13.2px">Durante julio completamos la puesta en marcha del <strong>sistema de seguimiento automático de uso</strong>, ya 100% operativo. En paralelo afinamos la precisión operativa y la facilidad de uso del Asistente: optimizamos el procesamiento de contexto para acelerar respuestas, sumamos botones de interacción rápida y corregimos desvíos puntuales.</p>
+                        <p contenteditable="true" class="item-body" style="font-size:13.2px">Durante marzo pusimos en marcha el <strong>resumen semanal automático</strong> para el equipo de ventas y mejoramos la velocidad de respuesta del Asistente. También sumamos atajos para las consultas más frecuentes y corregimos detalles puntuales que reportaron los usuarios.</p>
                     </div>
 
                     <!-- Sección numerada -->
                     <div class="sec-head mb-5">
                         <span class="sec-num">1</span>
-                        <h2 contenteditable="true" class="sec-title">Experiencia de Usuario e Interacción Más Fluida</h2>
+                        <h2 contenteditable="true" class="sec-title">Productividad del Equipo Comercial</h2>
                     </div>
 
                     <div class="flex-1 space-y-4">
@@ -423,24 +428,24 @@
                         <div class="glass p-4 flex gap-3.5">
                             <span class="icon-chip"><i class="fa-solid fa-circle-check"></i></span>
                             <div class="space-y-1.5">
-                                <h4 contenteditable="true" class="item-title">Implementación completada</h4>
-                                <p contenteditable="true" class="item-body">Finalizamos el desarrollo e integración del sistema de seguimiento automático de adopción y uso. Las funciones ya se encuentran <strong>totalmente operativas y en producción</strong>, permitiendo auditar la interacción de los usuarios de forma autónoma.</p>
+                                <h4 contenteditable="true" class="item-title">Resumen semanal automático</h4>
+                                <p contenteditable="true" class="item-body">Cada lunes, el Asistente envía a cada vendedor un <strong>resumen de su semana</strong>: clientes contactados, pendientes y próximos pasos. Así el equipo arranca la semana sabiendo dónde poner foco, sin armar reportes a mano.</p>
                             </div>
                         </div>
 
                         <!-- Ejemplo con bullets de marca -->
                         <div class="glass p-4">
-                            <h4 contenteditable="true" class="item-title mb-2">Otras mejoras de interacción</h4>
+                            <h4 contenteditable="true" class="item-title mb-2">Otras mejoras del mes</h4>
                             <ul class="brand-list item-body">
-                                <li contenteditable="true"><strong>Botones de respuesta rápida</strong> (Sí/No) directamente en el chat de Telegram.</li>
-                                <li contenteditable="true"><strong>Validación inteligente de clientes</strong>: verificación en segundo plano y confirmación final.</li>
-                                <li contenteditable="true"><strong>Interpretación avanzada de mensajes</strong>: entiende la intención aunque no sea 100% explícita.</li>
+                                <li contenteditable="true"><strong>Atajos de consulta</strong>: las preguntas más frecuentes se resuelven con un solo toque.</li>
+                                <li contenteditable="true"><strong>Respuestas más rápidas</strong>: optimizamos las consultas para reducir los tiempos de espera.</li>
+                                <li contenteditable="true"><strong>Correcciones puntuales</strong>: resolvimos los detalles que reportaron los usuarios durante el mes.</li>
                             </ul>
                         </div>
                     </div>
 
                     <div class="page-foot">
-                        <span contenteditable="true">Informe de Optimización y Mejoras — Julio 2026</span>
+                        <span contenteditable="true">Informe de Optimización y Mejoras — Marzo 2026</span>
                         <span>Página 2 de 2</span>
                     </div>
                 </div>
@@ -461,7 +466,7 @@
             if (ed) { lastEditable = ed; savedRange = sel.getRangeAt(0).cloneRange(); }
         });
         function restoreSelection() { if (!savedRange) return; const s = document.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
-        function stripGradient(el) { el.classList.remove('text-gradient'); el.style.backgroundImage = 'none'; el.style.webkitTextFillColor = 'currentColor'; }
+        function stripGradient(el) { if (!el.classList.contains('text-gradient')) return; el.classList.remove('text-gradient'); el.style.backgroundImage = 'none'; el.style.webkitTextFillColor = 'currentColor'; }
         function applyColor(color) {
             if (!lastEditable) return;
             restoreSelection();
@@ -534,5 +539,7 @@
             }
         }
     </script>
+    <!-- Editor: historial y guardado automático (ver SKILL.md, "Editor"). Va último. -->
+    <script src="../assets/editor/editor.js"></script>
 </body>
 </html>

@@ -29,10 +29,15 @@ backgrounds so only the content changes.
 **Trigger keywords:** informe, reporte, documento, one-pager, propuesta, dossier, PDF de marca
 
 **What it does:**
-- Fully self-contained HTML output (fonts, brand backgrounds, logo, Tailwind embedded) — works offline
-- Toolbar: zoom, text color, per-page PDF export, per-page image export (PNG 1x/2x/3x, JPG)
+- One folder per document: editable `working.html` + a fully self-contained compiled HTML
+  (fonts, brand backgrounds, logo, Tailwind embedded) — works offline
+- Built-in editor: edit any text in the browser with **autosave to disk** (double-click
+  `abrir-editor.cmd`, or let the agent open it), undo/redo/reset, change highlights when the
+  file is edited on disk, and the compiled copy regenerated on every save — no browser permissions
+- Toolbar: zoom, text color, PDF export, per-page image export (PNG 1x/2x/3x, JPG)
 - Any page size/orientation on request (A4 default, social sizes, custom px)
-- Design-system reference + a worked example (real report) to guide new layouts
+- Design-system reference + a worked example (fictitious client) to guide new layouts
+- Node.js only, zero dependencies
 
 **Install:**
 ```bash
@@ -65,9 +70,9 @@ skills/
 ├── piensa-brand-docs/
 │   ├── SKILL.md
 │   ├── template.html
-│   ├── assets/          # fonts, brand backgrounds, logo, offline libs
-│   ├── references/       # design system + worked example
-│   ├── scripts/          # build_document.py, bake_backgrounds.py
+│   ├── assets/          # fonts, brand backgrounds, logo, offline libs, editor (js+css)
+│   ├── references/       # design system + worked example (fictitious client)
+│   ├── scripts/          # new-document, build-document, serve, open-editor, export-md, bake-backgrounds (Node)
 │   └── resources/        # dropzone for extra images/logos
 └── html-to-image/
     ├── SKILL.md
