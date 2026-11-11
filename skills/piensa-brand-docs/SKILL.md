@@ -338,7 +338,7 @@ piensa-brand-docs/
 │   ├── design-system.md      # tokens + código de cada componente/bloque
 │   └── example-report.html   # documento de ejemplo (cliente ficticio) como guía
 ├── assets/
-│   ├── fonts.css             # Inter + Montserrat (+ Font Awesome de documentos viejos), embebidos
+│   ├── fonts.css             # Inter + Montserrat, embebidas (los íconos son lucide)
 │   ├── logo.png              # logo de marca
 │   ├── lib/                  # tailwind.js + html-to-image.js (offline)
 │   ├── editor/               # editor.js + editor.css: barra, historial, guardado, avisos
