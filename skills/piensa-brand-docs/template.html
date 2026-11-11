@@ -14,6 +14,9 @@
     <link rel="stylesheet" href="./assets/editor/editor.css">
     <script src="./assets/lib/tailwind.js"></script>
     <script src="./assets/lib/html-to-image.js"></script>
+    <!-- Íconos de las hojas: lucide (lucide.dev), versión fija. Se escriben <i data-lucide="nombre"></i>
+         y lucide.createIcons() los dibuja al cargar. Nunca dentro de un contenteditable. -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@1.70.0/dist/umd/lucide.min.js" integrity="sha384-64z4N640tVzhAicQVGzxE/48VNN9yS53U5kv9UH8ca7xGU4KSJ9zz8nD4C2BEerP" crossorigin="anonymous"></script>
 
     <style>
         :root {
@@ -97,8 +100,10 @@
             border-radius: 14px;
             position: relative;
         }
-        /* Línea superior con gradiente de marca (opcional, para bloques destacados) */
-        .glass-topline::before {
+        /* Línea superior con gradiente de marca: sólo en la portada. En los bloques de contenido
+           (Resumen, Lectura del período...) se sumaba al borde y en el PDF quedaba gruesa: ahí el
+           borde es parejo. La clase se mantiene porque export-md.js la usa para hallar el resumen. */
+        .page-pad-cover .glass-topline::before {
             content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 1px;
             background: linear-gradient(90deg, transparent, var(--purple), var(--mint), transparent);
             opacity: 0.7;
@@ -152,6 +157,9 @@
             background: rgba(255,255,255,0.04); border: 1px solid var(--line);
             color: var(--purple); font-size: 12px;
         }
+        /* Íconos lucide: 1em por defecto (siguen al tamaño de letra), 15px en el chip de las cards */
+        svg.lucide { width: 1em; height: 1em; flex-shrink: 0; }
+        .icon-chip svg.lucide { width: 15px; height: 15px; }
 
         /* Bullets de marca */
         ul.brand-list { list-style: none; padding: 0; margin: 0; }
@@ -180,16 +188,7 @@
             pointer-events: none; z-index: 40;
         }
 
-        /* Checkbox de selección de página (para exportar imágenes).
-           Va AFUERA de la hoja, arriba a la izquierda. */
-        .page-select {
-            display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px;
-            background: rgba(10,10,12,0.7);
-            -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-            border: 1px solid var(--line-strong); border-radius: 9px; padding: 7px 12px;
-            font-size: 12px; color: var(--ink-soft); font-weight: 600; cursor: pointer;
-        }
-        .page-select input { width: 16px; height: 16px; accent-color: var(--mint); cursor: pointer; }
+        /* El selector «Pág. N» de cada hoja y toda la interfaz se estilan en assets/editor/editor.css */
 
         /* ===================== ZOOM ===================== */
         .zoom-50 { transform: scale(0.5); }  .zoom-60 { transform: scale(0.6); }
@@ -202,8 +201,9 @@
         /* ============ MODO EXPORTACIÓN (imagen) / IMPRESIÓN ============
            Aplana el glass a relleno sólido y oculta controles, para que la captura
            (html-to-image) y el PDF salgan limpios y fieles. */
-        body.exporting .no-print,
-        body.exporting .page-select { display: none !important; }
+        body.exporting .page-container .no-print,
+        body.exporting .page-select,
+        body.exporting .margin-guide::after { display: none !important; }
         body.exporting .glass {
             -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
             background: rgba(255,255,255,0.05) !important;
@@ -217,7 +217,7 @@
             }
             html, body { background: #ffffff !important; margin: 0 !important; padding: 0 !important;
                 -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            .no-print, .page-select { display: none !important; }
+            .no-print, .page-select, .margin-guide::after { display: none !important; }
             .print-wrapper { padding: 0 !important; margin: 0 !important; background: none !important; }
             #documentScaleContainer { transform: none !important; gap: 0 !important; }
             .page-container {
@@ -238,88 +238,97 @@
 <body class="min-h-screen flex flex-col">
 
     <!-- ============================================================= -->
-    <!-- BARRA DE HERRAMIENTAS (no imprimible)                          -->
+    <!-- BARRA DEL EDITOR (no imprimible)                               -->
+    <!-- Estilos: assets/editor/editor.css. Íconos: <i data-pde-icon>,  -->
+    <!-- lucide, los dibuja assets/editor/editor.js.                    -->
     <!-- ============================================================= -->
-    <header class="no-print sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/10 px-6 py-3.5">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 border border-white/10">
-                    <i class="fa-solid fa-file-lines text-[15px]" style="color:var(--purple)"></i>
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="font-semibold text-[15px] leading-tight text-neutral-100 font-display">Editor de Documento</h1>
-                        <!-- Estado del guardado (lo completa assets/editor/editor.js) -->
-                        <span id="pdEditorStatus" class="no-print"></span>
-                    </div>
-                    <p class="text-[11px] text-neutral-500">Hacé clic sobre cualquier texto para editarlo antes de exportar</p>
-                </div>
+    <header class="no-print pde-bar" aria-label="Barra del editor">
+        <div class="pde-bar-row">
+            <div class="pde-bar-doc">
+                <img class="pde-bar-logo" src="./assets/logo.png" alt="" onerror="this.style.display='none'">
+                <span class="pde-bar-title" data-pde-role="doc-title">Editor de Documento</span>
+                <!-- Estado del guardado (lo completa assets/editor/editor.js) -->
+                <span id="pdEditorStatus" class="no-print"></span>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2.5">
-                <!-- Zoom -->
-                <div class="flex items-center gap-2 bg-neutral-900 rounded-lg px-2 py-1.5 border border-neutral-800">
-                    <span class="text-[11px] font-semibold text-neutral-400">Zoom</span>
-                    <select id="zoomSelector" onchange="changeZoom(this.value)" class="bg-neutral-950 text-[11px] text-neutral-100 border border-neutral-800 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#42e2b8] cursor-pointer">
-                        <option value="zoom-50">50%</option><option value="zoom-60">60%</option>
-                        <option value="zoom-70">70%</option><option value="zoom-80">80%</option>
-                        <option value="zoom-90">90%</option><option value="zoom-100" selected>100%</option>
-                        <option value="zoom-125">125%</option><option value="zoom-150">150%</option>
-                        <option value="zoom-175">175%</option><option value="zoom-200">200%</option>
-                    </select>
-                </div>
+            <!-- Deshacer / rehacer / restablecer (lo completa assets/editor/editor.js) -->
+            <div id="pdEditorHistory" role="group" aria-label="Historial"></div>
 
-                <button onclick="toggleMargins()" id="btnMargins" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 text-[11px] font-medium px-3.5 py-2 rounded-lg flex items-center gap-2 transition">
-                    <i class="fa-solid fa-border-none text-neutral-500"></i><span>Márgenes</span>
-                </button>
+            <span class="pde-sep" aria-hidden="true"></span>
 
-                <!-- Formato de descarga de imagen -->
-                <div class="flex items-center gap-2 bg-neutral-900 rounded-lg px-2 py-1.5 border border-neutral-800">
-                    <span class="text-[11px] font-semibold text-neutral-400">Imagen</span>
-                    <select id="dlFormat" class="bg-neutral-950 text-[11px] text-neutral-100 border border-neutral-800 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#42e2b8] cursor-pointer">
-                        <option value="png1" selected>PNG 1x</option>
-                        <option value="png2">PNG 2x</option>
-                        <option value="png3">PNG 3x</option>
-                        <option value="jpg">JPG (menor calidad)</option>
-                    </select>
-                    <label class="flex items-center gap-1 text-[11px] text-neutral-400 cursor-pointer pl-1 border-l border-neutral-800">
-                        <input type="checkbox" id="onlySelected" style="accent-color:var(--mint)"> Solo selecc.
+            <!-- Color de texto (panel) -->
+            <button type="button" class="pde-btn" popovertarget="pdeColorPop" aria-haspopup="dialog" onmousedown="event.preventDefault()" title="Color de texto">
+                <i data-pde-icon="palette"></i><span class="pde-label">Color</span><i data-pde-icon="chevron-down" class="pde-caret"></i>
+            </button>
+            <div id="pdeColorPop" class="pde-pop no-print" popover role="dialog" aria-label="Color de texto">
+                <p class="pde-pop-title">Color de texto</p>
+                <div class="pde-swatches">
+                    <button type="button" class="pde-swatch" style="--sw:#ededed" onmousedown="event.preventDefault()" onclick="applyColor('#ededed')" aria-label="Blanco" title="Blanco"></button>
+                    <button type="button" class="pde-swatch" style="--sw:#a1a1aa" onmousedown="event.preventDefault()" onclick="applyColor('#a1a1aa')" aria-label="Gris" title="Gris"></button>
+                    <button type="button" class="pde-swatch" style="--sw:#42e2b8" onmousedown="event.preventDefault()" onclick="applyColor('#42e2b8')" aria-label="Mint" title="Mint"></button>
+                    <button type="button" class="pde-swatch" style="--sw:#e1b6ff" onmousedown="event.preventDefault()" onclick="applyColor('#e1b6ff')" aria-label="Violeta" title="Violeta"></button>
+                    <button type="button" class="pde-swatch" style="--sw:#7b3fe4" onmousedown="event.preventDefault()" onclick="applyColor('#7b3fe4')" aria-label="Violeta intenso" title="Violeta intenso"></button>
+                    <button type="button" class="pde-swatch" style="--sw:#fbbf24" onmousedown="event.preventDefault()" onclick="applyColor('#fbbf24')" aria-label="Ámbar" title="Ámbar"></button>
+                    <label class="pde-swatch-custom" title="Otro color">
+                        <input type="color" oninput="applyColor(this.value)" value="#42e2b8" aria-label="Otro color">
+                        <i data-pde-icon="pipette"></i>
                     </label>
                 </div>
-
-                <button onclick="downloadImages()" id="btnImages" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 text-[11px] font-semibold px-3.5 py-2 rounded-lg flex items-center gap-2 transition">
-                    <i class="fa-solid fa-image" style="color:var(--mint)"></i><span>Descargar imágenes</span>
+                <hr class="pde-pop-sep">
+                <button type="button" class="pde-btn pde-btn-block pde-btn-quiet" onmousedown="event.preventDefault()" onclick="resetColor()" title="Quita el color aplicado al texto seleccionado (o al bloque)">
+                    <i data-pde-icon="eraser"></i><span>Quitar color</span>
                 </button>
-
-                <!-- PDF (botón primario) -->
-                <button onclick="triggerPrint()" class="bg-white hover:bg-neutral-200 text-black text-[11px] font-bold px-5 py-2 rounded-lg flex items-center gap-2 transition shadow-lg">
-                    <i class="fa-solid fa-arrow-down-to-line"></i><span>Descargar PDF</span>
-                </button>
+                <p class="pde-pop-hint">Seleccioná un texto (o hacé clic en un bloque) y elegí un color.</p>
             </div>
-        </div>
 
-        <!-- Fila de formato de texto -->
-        <div class="max-w-7xl mx-auto mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px]">
-            <!-- Deshacer / rehacer / restablecer (lo completa assets/editor/editor.js) -->
-            <div id="pdEditorHistory"></div>
-            <span class="w-px h-5 bg-white/10"></span>
-            <span class="font-semibold text-neutral-400 flex items-center gap-1.5"><i class="fa-solid fa-palette text-neutral-500"></i> Color de texto</span>
-            <div class="flex items-center gap-1.5">
-                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#ededed')" title="Blanco" class="w-5 h-5 rounded-full border border-white/20" style="background:#ededed"></button>
-                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#a1a1aa')" title="Gris" class="w-5 h-5 rounded-full border border-white/20" style="background:#a1a1aa"></button>
-                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#42e2b8')" title="Mint" class="w-5 h-5 rounded-full border border-white/20" style="background:#42e2b8"></button>
-                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#e1b6ff')" title="Violeta" class="w-5 h-5 rounded-full border border-white/20" style="background:#e1b6ff"></button>
-                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#7b3fe4')" title="Violeta intenso" class="w-5 h-5 rounded-full border border-white/20" style="background:#7b3fe4"></button>
-                <button type="button" onmousedown="event.preventDefault()" onclick="applyColor('#fbbf24')" title="Ámbar" class="w-5 h-5 rounded-full border border-white/20" style="background:#fbbf24"></button>
+            <div class="pde-bar-spacer"></div>
+            <span class="pde-break" aria-hidden="true"></span>
+
+            <!-- Zoom -->
+            <div class="pde-zoom" role="group" aria-label="Zoom">
+                <button type="button" class="pde-btn pde-icon-only" data-pde-zoom-step="-1" aria-label="Alejar" title="Alejar"><i data-pde-icon="minus"></i></button>
+                <select id="zoomSelector" class="pde-select" onchange="changeZoom(this.value)" aria-label="Zoom" title="Zoom">
+                    <option value="zoom-50">50%</option><option value="zoom-60">60%</option>
+                    <option value="zoom-70">70%</option><option value="zoom-80">80%</option>
+                    <option value="zoom-90">90%</option><option value="zoom-100" selected>100%</option>
+                    <option value="zoom-125">125%</option><option value="zoom-150">150%</option>
+                    <option value="zoom-175">175%</option><option value="zoom-200">200%</option>
+                </select>
+                <button type="button" class="pde-btn pde-icon-only" data-pde-zoom-step="1" aria-label="Acercar" title="Acercar"><i data-pde-icon="plus"></i></button>
             </div>
-            <label class="flex items-center gap-1.5 text-neutral-400 cursor-pointer"><span>Personalizado</span>
-                <input type="color" oninput="applyColor(this.value)" value="#42e2b8" class="w-6 h-6 rounded cursor-pointer bg-transparent border border-neutral-700 p-0">
-            </label>
-            <span class="w-px h-5 bg-white/10"></span>
-            <button type="button" onmousedown="event.preventDefault()" onclick="resetColor()" title="Quita el color aplicado al texto seleccionado (o al bloque)" class="bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 font-medium px-3 py-1.5 rounded-lg flex items-center gap-2 transition">
-                <i class="fa-solid fa-eraser text-neutral-500"></i><span>Quitar color</span>
+
+            <button type="button" id="btnMargins" class="pde-btn" onclick="toggleMargins()" aria-pressed="false" title="Mostrar las guías de margen">
+                <i data-pde-icon="square-dashed"></i><span class="pde-label">Márgenes</span>
             </button>
-            <span class="text-neutral-600 hidden lg:inline">Consejo: seleccioná el texto (o hacé clic en el bloque) y elegí un color.</span>
+
+            <span class="pde-sep" aria-hidden="true"></span>
+
+            <!-- Descargar imágenes (panel) -->
+            <button type="button" class="pde-btn" popovertarget="pdeImgPop" aria-haspopup="dialog" title="Descargar las páginas como imágenes">
+                <i data-pde-icon="images"></i><span class="pde-label">Imágenes</span><i data-pde-icon="chevron-down" class="pde-caret"></i>
+            </button>
+            <div id="pdeImgPop" class="pde-pop no-print" popover role="dialog" aria-label="Descargar imágenes">
+                <p class="pde-pop-title">Descargar imágenes</p>
+                <label class="pde-field" for="dlFormat"><span>Formato</span>
+                    <select id="dlFormat" class="pde-select">
+                        <option value="png1" selected>PNG 1x</option>
+                        <option value="png2">PNG 2x, más nítida</option>
+                        <option value="png3">PNG 3x, máxima nitidez</option>
+                        <option value="jpg">JPG, más liviana</option>
+                    </select>
+                </label>
+                <label class="pde-checkrow"><input type="checkbox" id="onlySelected" class="pde-check"><span>Solo las páginas marcadas</span></label>
+                <p class="pde-pop-hint" data-pde-role="img-count">Se descarga una imagen por página.</p>
+                <hr class="pde-pop-sep">
+                <button type="button" id="btnImages" class="pde-btn pde-btn-block pde-btn-accent" onclick="downloadImages()">
+                    <i data-pde-icon="images"></i><span>Descargar imágenes</span>
+                </button>
+            </div>
+
+            <!-- PDF (botón principal) -->
+            <button type="button" class="pde-btn pde-btn-primary" onclick="triggerPrint()" title="Abre el diálogo de impresión: Destino «Guardar como PDF», Márgenes «Ninguno» y «Gráficos de fondo» activado">
+                <i data-pde-icon="file-down"></i><span class="pde-label-long">Descargar PDF</span><span class="pde-label-short">PDF</span>
+            </button>
         </div>
     </header>
 
@@ -411,7 +420,7 @@
                     <!-- Bloque destacado (resumen/intro) -->
                     <div class="glass glass-topline p-5 mb-7">
                         <h3 class="flex items-center gap-2 mb-2.5">
-                            <i class="fa-solid fa-bolt text-[12px]" style="color:var(--mint)"></i>
+                            <i data-lucide="zap" class="text-[13px]" style="color:var(--mint)"></i>
                             <span contenteditable="true" class="font-display font-bold text-[13px] uppercase tracking-wider" style="color:var(--mint)">{{HIGHLIGHT_TITLE}}</span>
                         </h3>
                         <p contenteditable="true" class="item-body" style="font-size:13.2px">{{HIGHLIGHT_BODY}}</p>
@@ -426,7 +435,7 @@
                     <div class="flex-1 space-y-4">
                         <!-- Card con ícono (duplicá por cada ítem) -->
                         <div class="glass p-4 flex gap-3.5">
-                            <span class="icon-chip"><i class="fa-solid fa-circle-check"></i></span>
+                            <span class="icon-chip"><i data-lucide="circle-check"></i></span>
                             <div class="space-y-1.5">
                                 <h4 contenteditable="true" class="item-title">{{ITEM_TITLE}}</h4>
                                 <p contenteditable="true" class="item-body">{{ITEM_BODY}}</p>
@@ -456,6 +465,9 @@
     </main>
 
     <script>
+        /* ---------- Íconos de las hojas (lucide, versión fija en el <head>) ---------- */
+        if (window.lucide) lucide.createIcons();
+
         /* ---------- Formato de texto (color) ---------- */
         let lastEditable = null, savedRange = null;
         document.addEventListener('selectionchange', () => {
@@ -467,8 +479,11 @@
         });
         function restoreSelection() { if (!savedRange) return; const s = document.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
         function stripGradient(el) { if (!el.classList.contains('text-gradient')) return; el.classList.remove('text-gradient'); el.style.backgroundImage = 'none'; el.style.webkitTextFillColor = 'currentColor'; }
+        // Avisos con el editor (assets/editor/editor.js); si no cargó, un alert.
+        function pdNotify(o) { if (window.__pdEditor) window.__pdEditor.toast(o); else alert(o.title + (o.msg ? '\n' + o.msg.replace(/<[^>]+>/g, '') : '')); }
+        function needText() { pdNotify({ type: 'info', icon: 'palette', id: 'color', title: 'Primero elegí un texto', msg: 'Hacé clic en un texto (o seleccioná una parte) y después elegí el color.' }); }
         function applyColor(color) {
-            if (!lastEditable) return;
+            if (!lastEditable) return needText();
             restoreSelection();
             const sel = document.getSelection();
             stripGradient(lastEditable);
@@ -482,10 +497,11 @@
             el.dataset.origGradient = el.classList.contains('text-gradient') ? '1' : '0';
         });
         function resetColor() {
-            if (!lastEditable) return; const el = lastEditable;
+            if (!lastEditable) return needText(); const el = lastEditable;
             el.querySelectorAll('font').forEach(f => { const s = document.createElement('span'); s.innerHTML = f.innerHTML; f.replaceWith(s); });
             el.querySelectorAll('[style]').forEach(n => { n.style.color=''; n.style.webkitTextFillColor=''; n.style.backgroundImage=''; if (!n.getAttribute('style')) n.removeAttribute('style'); });
             el.style.color=''; el.style.webkitTextFillColor=''; el.style.backgroundImage='';
+            if (!el.getAttribute('style')) el.removeAttribute('style');
             if (el.dataset.origGradient === '1') el.classList.add('text-gradient'); else el.classList.remove('text-gradient');
         }
 
@@ -495,8 +511,8 @@
             const pages = document.querySelectorAll('.page-container'), btn = document.getElementById('btnMargins');
             const active = !pages[0].classList.contains('margin-guide');
             pages.forEach(p => p.classList.toggle('margin-guide', active));
-            btn.innerHTML = active ? '<i class="fa-solid fa-border-all" style="color:var(--mint)"></i><span>Márgenes</span>'
-                                   : '<i class="fa-solid fa-border-none text-neutral-500"></i><span>Márgenes</span>';
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            btn.title = active ? 'Ocultar las guías de margen' : 'Mostrar las guías de margen';
         }
         function triggerPrint() { try { window.print(); } catch (e) { console.warn('Impresión bloqueada por el entorno.'); } }
 
@@ -505,8 +521,19 @@
         function downloadDataUrl(dataUrl, name) {
             const a = document.createElement('a'); a.href = dataUrl; a.download = name; document.body.appendChild(a); a.click(); a.remove();
         }
+        // html-to-image no copia a los textos de los gráficos SVG los estilos que vienen por clase
+        // (letra, tamaño, color): se fijan en línea sólo mientras dura la captura y después se restauran.
+        function inlineSvgText(root) {
+            const saved = [];
+            root.querySelectorAll('svg text, svg tspan').forEach(t => {
+                const cs = getComputedStyle(t);
+                saved.push([t, t.getAttribute('style')]);
+                ['font-family', 'font-size', 'font-weight', 'letter-spacing', 'text-transform', 'fill', 'fill-opacity'].forEach(k => t.style.setProperty(k, cs.getPropertyValue(k)));
+            });
+            return () => saved.forEach(([t, s]) => s == null ? t.removeAttribute('style') : t.setAttribute('style', s));
+        }
         async function downloadImages() {
-            if (typeof htmlToImage === 'undefined') { alert('La librería de exportación no cargó. Abrí el documento final (no el template) en tu navegador.'); return; }
+            if (typeof htmlToImage === 'undefined') { pdNotify({ type: 'error', title: 'No se pudo exportar', msg: 'La librería de exportación no cargó. Abrí el documento final (no el template) en tu navegador.', duration: 0, id: 'img' }); return; }
             const scaleMap = { png1: 1, png2: 2, png3: 3, jpg: 2 };
             const fmt = document.getElementById('dlFormat').value;
             const onlySelected = document.getElementById('onlySelected').checked;
@@ -516,24 +543,34 @@
                 const cb = wrap && wrap.querySelector('.page-select input');
                 return cb && cb.checked;
             });
-            if (!pages.length) { alert('No hay páginas seleccionadas.'); return; }
+            if (!pages.length) { pdNotify({ type: 'warn', title: 'No hay páginas marcadas', msg: 'Marcá al menos una página en su casilla «Pág.» o desactivá «Solo las páginas marcadas».', id: 'img' }); return; }
 
             const btn = document.getElementById('btnImages'); const original = btn.innerHTML;
+            const spin = window.__pdEditor ? window.__pdEditor.icon('loader-circle', 'pde-spin') : '';
             btn.disabled = true;
+            // Sin foco en un texto: que la captura no salga con el recuadro de edición
+            if (document.activeElement && document.activeElement.isContentEditable) document.activeElement.blur();
             document.body.classList.add('exporting');
+            let done = 0;
             try {
                 for (const p of pages) {
-                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Exportando ' + pageNumberOf(p) + '…</span>';
+                    btn.innerHTML = spin + '<span>Exportando ' + (done + 1) + ' de ' + pages.length + '…</span>';
                     const opts = { pixelRatio: scaleMap[fmt], cacheBust: true, width: p.offsetWidth, height: p.offsetHeight,
                                    style: { transform: 'none', margin: '0' } };
                     let dataUrl, ext;
-                    if (fmt === 'jpg') { dataUrl = await htmlToImage.toJpeg(p, Object.assign({}, opts, { quality: 0.92, backgroundColor: '#0a0a0a' })); ext = 'jpg'; }
-                    else { dataUrl = await htmlToImage.toPng(p, opts); ext = 'png'; }
+                    const restoreSvg = inlineSvgText(p);
+                    try {
+                        if (fmt === 'jpg') { dataUrl = await htmlToImage.toJpeg(p, Object.assign({}, opts, { quality: 0.92, backgroundColor: '#0a0a0a' })); ext = 'jpg'; }
+                        else { dataUrl = await htmlToImage.toPng(p, opts); ext = 'png'; }
+                    } finally { restoreSvg(); }
                     downloadDataUrl(dataUrl, 'pagina-' + pageNumberOf(p) + '.' + ext);
+                    done++;
                     await new Promise(r => setTimeout(r, 150));
                 }
+                pdNotify({ type: 'success', icon: 'images', id: 'img', title: done === 1 ? 'Imagen descargada' : 'Imágenes descargadas',
+                           msg: done === 1 ? 'Se descargó 1 página.' : 'Se descargaron <strong>' + done + ' páginas</strong>.' });
             } catch (e) {
-                console.error(e); alert('Hubo un problema al exportar las imágenes. Ver consola.');
+                console.error(e); pdNotify({ type: 'error', title: 'No se pudieron exportar las imágenes', msg: 'Probá de nuevo. Si sigue fallando, el detalle está en la consola del navegador (F12).', duration: 0, id: 'img' });
             } finally {
                 document.body.classList.remove('exporting'); btn.disabled = false; btn.innerHTML = original;
             }

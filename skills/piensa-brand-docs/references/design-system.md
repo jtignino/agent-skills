@@ -70,28 +70,48 @@ El `.sec-num` es borde fino mint + interior apagado + número mint (sin gradient
 
 ```html
 <div class="glass p-4 flex gap-3.5">
-  <span class="icon-chip"><i class="fa-solid fa-circle-check"></i></span>
+  <span class="icon-chip"><i data-lucide="circle-check"></i></span>
   <div class="space-y-1.5">
     <h4 contenteditable="true" class="item-title">Título del ítem</h4>
     <p contenteditable="true" class="item-body">Descripción. Podés usar <strong>negrita</strong>.</p>
   </div>
 </div>
 ```
-Íconos: Font Awesome 6 **solid** (`fa-solid fa-...`). Ejemplos útiles: `fa-circle-check`,
-`fa-bolt`, `fa-shield-halved`, `fa-users-gear`, `fa-chart-line`, `fa-brain`, `fa-gears`,
-`fa-user-plus`, `fa-toolbox`, `fa-magnifying-glass-chart`, `fa-layer-group`, `fa-bug-slash`.
 
-## Bloque destacado (resumen/intro, con línea de gradiente)
+## Íconos (lucide)
+
+Todos los íconos son de **lucide** (https://lucide.dev/icons), trazo 2, versión fija **1.70.0**.
+El `<head>` del template la carga desde jsDelivr (con `integrity`) y `lucide.createIcons()`
+cambia cada `<i data-lucide="nombre"></i>` por su SVG al abrir la página: para usar uno,
+buscalo en lucide.dev y escribí su nombre. Tamaño: `1em`, o sea que sigue al tamaño de letra
+(`class="text-[13px]"` en un título), y `15px` dentro de `.icon-chip`.
+
+- **Nunca** pongas un ícono dentro de un elemento `contenteditable="true"`: el editor guarda
+  el contenido de los editables y se guardaría el SVG dibujado en vez del `<i>`.
+- Para verlos hace falta internet (el compilado no los incrusta). La interfaz del editor no
+  depende de eso: sus íconos vienen dentro de `assets/editor/editor.js`.
+- Usá los nombres de lucide 1.x: p. ej. `triangle-exclamation-point` (no `alert-triangle`) y
+  `rotate-ccw-clock` para «historial».
+
+Ejemplos útiles: `circle-check`, `zap`, `shield-half`, `shield-check`, `user-cog`, `chart-line`,
+`brain`, `cog`, `user-plus`, `toolbox`, `search-check`, `layers`, `bug-off`, `database`,
+`server`, `refresh-cw`, `gauge`, `messages-square`, `book-open`, `list-checks`.
+
+## Bloque destacado (resumen/intro)
 
 ```html
 <div class="glass glass-topline p-5 mb-7">
   <h3 class="flex items-center gap-2 mb-2.5">
-    <i class="fa-solid fa-bolt text-[12px]" style="color:var(--mint)"></i>
+    <i data-lucide="zap" class="text-[13px]" style="color:var(--mint)"></i>
     <span contenteditable="true" class="font-display font-bold text-[13px] uppercase tracking-wider" style="color:var(--mint)">Resumen</span>
   </h3>
   <p contenteditable="true" class="item-body" style="font-size:13.2px">Texto del resumen…</p>
 </div>
 ```
+La línea superior en gradiente (`.glass-topline::before`) sólo se dibuja en la **portada**
+(`.page-pad-cover`): en un bloque de contenido se sumaba al borde y en el PDF quedaba gruesa,
+así que ahí el borde es parejo en los cuatro lados. La clase `glass-topline` igual se pone en
+el resumen porque `export-md.js` la usa para encontrarlo.
 
 ## Lista con bullets de marca
 

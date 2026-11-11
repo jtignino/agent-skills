@@ -31,6 +31,8 @@ autocontenido** para compartir. Desde la **barra de herramientas** se exporta a 
 - **El documento final incrusta TODO** (fuentes, fondos, logo, Tailwind, librería de
   export) como data URIs. Así funciona offline y — clave — permite exportar imágenes del
   lado del cliente sin que el navegador bloquee el canvas por seguridad ("tainted canvas").
+  La excepción son los **íconos de las hojas** (lucide, versión fija desde jsDelivr): para
+  verlos hace falta internet. Los de la barra del editor sí vienen incluidos.
 - **Flujo dev → build**: editás un HTML liviano que referencia `./assets/...` (fácil de
   leer y modificar); un script lo compila incrustando todo. Nunca edites el archivo final
   gigante a mano.
@@ -55,7 +57,10 @@ autocontenido** para compartir. Desde la **barra de herramientas** se exporta a 
   `#7400b8` / `#7b3fe4` / `#e1b6ff` y **mint** `#42e2b8` / `#62fbd0`.
 - **Tipografía**: Montserrat (títulos/display) + Inter (texto). Embebidas.
 - **Bloques/cards**: glassmorfismo (blur 16px + saturación), borde fino `rgba(255,255,255,.08)`,
-  esquina redondeada 14px, línea superior en gradiente opcional para destacados.
+  esquina redondeada 14px. La línea superior en gradiente (`.glass-topline`) sólo se dibuja
+  en la portada; en los bloques de contenido el borde es parejo (en el PDF se veía gruesa).
+- **Íconos**: lucide (lucide.dev), trazo 2, `<i data-lucide="nombre"></i>`. Nunca dentro de
+  un `contenteditable`. Detalle y ejemplos en `references/design-system.md`.
 - **Tags/pills**, **badges numéricos** (estilo Supabase: borde fino mint + interior apagado),
   **bullets** en gradiente, **encabezado corrido** y **pie** con texto a la izquierda y
   numeración a la derecha.
@@ -131,7 +136,8 @@ sea cual sea la estructura):
   pagine bien y la descarga de imágenes funcione).
 - La barra de herramientas y el bloque `<script>` **intactos** — ahí vive toda la lógica
   de edición, zoom, exportación y colores. Incluye los huecos del editor
-  (`#pdEditorStatus`, `#pdEditorHistory`), el `<link>` a `assets/editor/editor.css`, el
+  (`#pdEditorStatus`, `#pdEditorHistory`), el `<script>` de lucide del `<head>` (los íconos
+  de las hojas) y su `lucide.createIcons()`, el `<link>` a `assets/editor/editor.css`, el
   `<meta name="pd-build-output">` y el `<script src="./assets/editor/editor.js">` al final
   del `<body>`.
 - Todo texto editable con el atributo exacto `contenteditable="true"`: es lo único que el
@@ -221,18 +227,23 @@ puede abrirlo con doble clic normalmente en su propio navegador (es autocontenid
 depende de ningún servidor).
 
 ### 7. Exportar (lo hace la persona desde la barra)
-- **Descargar PDF**: botón blanco → diálogo del navegador → *Guardar como PDF · Márgenes:
+- **Descargar PDF**: botón violeta → diálogo del navegador → *Guardar como PDF · Márgenes:
   Ninguno · Gráficos de fondo: ✓*. Texto vectorial, fondo imagen, idéntico en todo visor.
-- **Descargar imágenes**: elegir formato (**PNG 1x** default, PNG 2x, PNG 3x, o **JPG**
-  —menor calidad—) y, si se quiere, tildar **"Solo selecc."** para bajar sólo las hojas
-  marcadas con su checkbox. Cada hoja se baja como una imagen.
+- **Descargar imágenes**: panel **Imágenes** → formato (**PNG 1x** default, PNG 2x, PNG 3x
+  o **JPG**, más liviana) y, si se quiere, **"Solo las páginas marcadas"** (las que tienen
+  tildada su casilla «Pág. N»; desmarcar una hoja la activa sola). El panel dice cuántas se
+  bajan. Cada hoja se baja como una imagen; las guías de margen nunca salen.
 
 ## Barra de herramientas (qué incluye)
-Indicador de guardado · Zoom escalonado 50→200% (default 100%) · Márgenes (guías) · Selector
-de formato de imagen + selección de páginas · Descargar imágenes · Descargar PDF · Historial
-(deshacer, rehacer, restablecer) · Colores de texto (muestras + personalizado) · Quitar color
-(vuelve el bloque/selección a su color o gradiente original). *No* incluye "alternar
-gradiente" (se quitó a propósito).
+Una fila fija arriba (`.pde-bar`; pasa a dos filas en anchos chicos). Sus estilos están en
+`assets/editor/editor.css` y sus íconos (`<i data-pde-icon="nombre">`, lucide) los dibuja
+`assets/editor/editor.js`, que también maneja los paneles y el zoom −/+.
+De izquierda a derecha: logo y nombre del documento (sale del `<title>`) · estado del
+guardado · deshacer / rehacer / restablecer · panel **Color** (muestras, otro color, Quitar
+color, que vuelve el bloque o la selección a su color o gradiente original) · zoom − 50→200% +
+· Márgenes (interruptor) · panel **Imágenes** · **Descargar PDF**. *No* incluye "alternar
+gradiente" (se quitó a propósito). Todo se usa con teclado (Tab, Enter, Esc) y los botones
+de sólo ícono tienen nombre accesible.
 
 ## Editor: historial y guardado automático
 Vive en `assets/editor/editor.js` + `editor.css` (parte del artefacto base: lo trae todo
@@ -257,11 +268,12 @@ hay un editor abierto para esa carpeta, no levanta otro: sólo abre el navegador
 Termina en ~1 s: **no** lo corras en segundo plano. Si el documento no es `working.html`,
 pasá el nombre como segundo argumento.
 
-**Indicador de estado** (al lado de "Editor de Documento"):
+**Indicador de estado** (al lado del nombre del documento; los estados con algo para
+resolver se abren con clic o con Enter):
 | Estado | Significa |
 |---|---|
-| Guardado / Sin guardar / Guardando | guardado automático activo |
-| Sin guardado | abierto con doble clic (`file://`) o sin el servidor: edita, pero al cerrar se pierde. Clic → explica cómo abrirlo bien |
+| Guardado (con la hora) / Guardando… | guardado automático activo |
+| No se guarda | abierto con doble clic (`file://`) o sin el servidor: edita, pero al cerrar se pierde. Clic → explica cómo abrirlo bien |
 | Editor cerrado | se cerró la ventana del `.cmd` con la página abierta; al reabrirla se reconecta y guarda lo pendiente |
 | Conflicto | el archivo cambió en disco con cambios locales sin guardar: modal para **Recargar** o **Guardar los míos** |
 | Copia compilada | es el compilado: no guarda nunca (el servidor tampoco lo sobrescribe) |
@@ -326,10 +338,10 @@ piensa-brand-docs/
 │   ├── design-system.md      # tokens + código de cada componente/bloque
 │   └── example-report.html   # documento de ejemplo (cliente ficticio) como guía
 ├── assets/
-│   ├── fonts.css             # Inter + Montserrat + iconos, embebidos
+│   ├── fonts.css             # Inter + Montserrat (+ Font Awesome de documentos viejos), embebidos
 │   ├── logo.png              # logo de marca
 │   ├── lib/                  # tailwind.js + html-to-image.js (offline)
-│   ├── editor/               # editor.js + editor.css: historial, guardado, avisos
+│   ├── editor/               # editor.js + editor.css: barra, historial, guardado, avisos
 │   └── backgrounds/
 │       ├── a4/ bg1..bg4.png  # fondos horneados A4 (1.5x)
 │       └── _source.html      # generador de fondos (lo usa bake-backgrounds.js)
